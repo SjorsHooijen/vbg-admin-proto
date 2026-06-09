@@ -1,0 +1,173 @@
+/* ============================================================
+   VBG — Virtual Building Generator
+   Foundations: Color + Type
+   Engineering-intent platform. Modern industrial aesthetic.
+   Single warm-amber brand accent over a cool slate neutral scale.
+   ============================================================ */
+
+/* IBM Plex — engineering-grade grotesque + mono companion for
+   IDs, measurements, rule traces, and tabular data. */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* ---------- Brand ---------- */
+  --vbg-amber:        #F39600;  /* primary brand mark color */
+  --vbg-amber-600:    #DB8600;  /* hover / pressed */
+  --vbg-amber-700:    #B86F00;  /* active text on light */
+  --vbg-amber-300:    #FBC367;  /* light accents */
+  --vbg-amber-100:    #FDEBCB;  /* tints, selected rows */
+  --vbg-amber-50:     #FEF7EA;  /* faint wash */
+
+  /* ---------- Neutral slate scale (cool, faintly blue) ---------- */
+  --slate-50:   #F7F8FA;
+  --slate-100:  #EEF0F4;
+  --slate-150:  #E4E7ED;
+  --slate-200:  #D7DBE3;
+  --slate-300:  #C0C6D1;
+  --slate-400:  #9AA2B1;
+  --slate-500:  #6B7382;
+  --slate-600:  #4D5563;
+  --slate-700:  #363D49;
+  --slate-800:  #232932;
+  --slate-900:  #161A21;
+  --slate-950:  #0E1116;
+
+  /* ---------- Semantic surfaces (light theme = primary) ---------- */
+  --bg-app:       var(--slate-50);    /* application backdrop */
+  --bg-surface:   #FFFFFF;            /* panels, cards, inspectors */
+  --bg-sunken:    var(--slate-100);   /* wells, inset tracks, tables */
+  --bg-raised:    #FFFFFF;            /* menus, popovers (with shadow) */
+  --bg-canvas:    var(--slate-950);   /* 3D viewport / generated reality */
+  --bg-hover:     var(--slate-100);   /* row / item hover */
+  --bg-selected:  var(--vbg-amber-50);/* selected row tint */
+
+  /* ---------- Foreground ---------- */
+  --fg1:        var(--slate-900);  /* primary text */
+  --fg2:        var(--slate-600);  /* secondary text */
+  --fg3:        var(--slate-500);  /* muted text, labels, captions */
+  --fg4:        var(--slate-400);  /* disabled, placeholders */
+  --fg-inverse: #FFFFFF;           /* text on dark / amber */
+  --fg-accent:  var(--vbg-amber-700);
+
+  /* ---------- Borders / dividers ---------- */
+  --border-subtle: var(--slate-150);
+  --border:        var(--slate-200);
+  --border-strong: var(--slate-300);
+  --border-focus:  var(--vbg-amber);
+
+  /* ---------- Semantic status (engineering states) ---------- */
+  /* Generated = brand amber: the output of rule-driven generation */
+  --status-generated:     #F39600;
+  --status-generated-bg:  #FEF7EA;
+  --status-generated-fg:  #B86F00;
+
+  /* Validated = teal: engineering-checked, trustworthy */
+  --status-validated:     #0E8A9E;
+  --status-validated-bg:  #E4F4F6;
+  --status-validated-fg:  #0A6F80;
+
+  /* Success = green: passed / complete */
+  --status-success:       #1F9D55;
+  --status-success-bg:    #E6F5EC;
+  --status-success-fg:    #157A41;
+
+  /* Pending = slate-blue: queued, computing */
+  --status-pending:       #6B7382;
+  --status-pending-bg:    #EEF0F4;
+  --status-pending-fg:    #4D5563;
+
+  /* Info = blue: informational, links */
+  --status-info:          #2F6FEB;
+  --status-info-bg:       #E8F0FE;
+  --status-info-fg:       #1E54C0;
+
+  /* Warning = gold: needs attention (distinct hue from brand amber) */
+  --status-warning:       #E0A800;
+  --status-warning-bg:    #FBF3D6;
+  --status-warning-fg:    #9C7400;
+
+  /* Error = red: invalid, failed constraint */
+  --status-error:         #D64545;
+  --status-error-bg:      #FBEAEA;
+  --status-error-fg:      #A82E2E;
+
+  /* ---------- Type families ---------- */
+  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* ---------- Type scale (desktop engineering UI) ---------- */
+  --text-display: 600 32px/1.15 var(--font-sans);
+  --text-h1:      600 24px/1.2  var(--font-sans);
+  --text-h2:      600 19px/1.25 var(--font-sans);
+  --text-h3:      600 16px/1.3  var(--font-sans);
+  --text-body:    400 14px/1.5  var(--font-sans);
+  --text-body-strong: 500 14px/1.5 var(--font-sans);
+  --text-sm:      400 13px/1.45 var(--font-sans);
+  --text-label:   500 12px/1.35 var(--font-sans); /* UI labels, tabs */
+  --text-caption: 400 12px/1.4  var(--font-sans);
+  --text-mono:    400 13px/1.45 var(--font-mono); /* IDs, values */
+  --text-mono-sm: 400 12px/1.4  var(--font-mono);
+
+  /* Overline / micro-label: tracked, uppercase, used for section
+     headers in inspectors and property sheets */
+  --tracking-overline: 0.06em;
+
+  /* ---------- Spacing (4px base grid) ---------- */
+  --sp-0: 0;     --sp-1: 4px;   --sp-2: 8px;   --sp-3: 12px;
+  --sp-4: 16px;  --sp-5: 20px;  --sp-6: 24px;  --sp-8: 32px;
+  --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+
+  /* ---------- Radii (precise, restrained) ---------- */
+  --r-xs: 3px;   /* chips, badges, inputs-sm */
+  --r-sm: 5px;   /* buttons, inputs */
+  --r-md: 7px;   /* cards, panels */
+  --r-lg: 10px;  /* dialogs, large surfaces */
+  --r-full: 999px;
+
+  /* ---------- Elevation (cool, low-spread; engineering-restrained) -- */
+  --shadow-sm:  0 1px 2px rgba(22, 26, 33, 0.06),
+                0 1px 1px rgba(22, 26, 33, 0.04);
+  --shadow-md:  0 2px 4px rgba(22, 26, 33, 0.06),
+                0 4px 12px rgba(22, 26, 33, 0.08);
+  --shadow-lg:  0 8px 24px rgba(22, 26, 33, 0.12),
+                0 2px 6px rgba(22, 26, 33, 0.08);
+  --shadow-pop: 0 6px 16px rgba(22, 26, 33, 0.14),
+                0 0 0 1px rgba(22, 26, 33, 0.04);
+  --ring-focus: 0 0 0 3px rgba(243, 150, 0, 0.30);
+
+  /* ---------- Motion ---------- */
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.4, 1);
+  --dur-fast: 110ms;
+  --dur-base: 170ms;
+  --dur-slow: 260ms;
+}
+
+/* ============================================================
+   Semantic element styles — apply directly or copy patterns
+   ============================================================ */
+.vbg-display { font: var(--text-display); color: var(--fg1); letter-spacing: -0.01em; }
+h1, .vbg-h1   { font: var(--text-h1);  color: var(--fg1); letter-spacing: -0.01em; margin: 0; }
+h2, .vbg-h2   { font: var(--text-h2);  color: var(--fg1); margin: 0; }
+h3, .vbg-h3   { font: var(--text-h3);  color: var(--fg1); margin: 0; }
+.vbg-body     { font: var(--text-body); color: var(--fg2); }
+.vbg-sm       { font: var(--text-sm);   color: var(--fg3); }
+.vbg-label    { font: var(--text-label); color: var(--fg2); }
+.vbg-caption  { font: var(--text-caption); color: var(--fg3); }
+.vbg-overline {
+  font: var(--text-label);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-overline);
+  color: var(--fg3);
+}
+.vbg-mono     { font: var(--text-mono); color: var(--fg1); }
+.vbg-mono-muted { font: var(--text-mono-sm); color: var(--fg3); }
+
+code, .vbg-code {
+  font: var(--text-mono-sm);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xs);
+  padding: 1px 5px;
+  color: var(--fg1);
+}

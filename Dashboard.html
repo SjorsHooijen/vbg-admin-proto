@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VBG — Dashboard</title>
+<link rel="stylesheet" href="styles/tokens.css">
+<script src="components/sidebar.js" defer></script>
+<script src="components/companies-table.js" defer></script>
+<script src="components/activity-feed.js" defer></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; width: 100%;
+    background: #0b0d11;
+    font-family: var(--font-sans);
+    color: var(--fg1);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  /* ---- scale-to-fit stage ---- */
+  #fit { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #stage {
+    width: 1920px; height: 1080px;
+    flex: 0 0 auto;
+    background: var(--bg-app);
+    display: flex; min-height: 0;
+    transform-origin: center center;
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,.55);
+  }
+
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .overline {
+    font: var(--text-label); text-transform: uppercase;
+    letter-spacing: var(--tracking-overline); color: var(--fg3);
+  }
+  .ico { display: inline-flex; }
+  .ico svg { display: block; }
+
+  /* ============================ SIDEBAR ============================ */
+  .sidebar {
+    /* Sidebar markup + styles live in components/sidebar.js (<vbg-sidebar>). */
+  }
+
+  /* ============================ MAIN ============================ */
+  .main { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+  .main-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 0 24px;
+  }
+  .main-header .greeting h1 { font: var(--text-h1); letter-spacing: -0.01em; }
+  .main-header .greeting p { margin: 4px 0 0; font: var(--text-sm); color: var(--fg3); }
+  .main-header .actions { display: flex; align-items: center; gap: 12px; }
+  .search {
+    display: flex; align-items: center; gap: 9px;
+    background: var(--bg-sunken); border: 1px solid var(--border);
+    border-radius: var(--r-sm); padding: 0 12px; height: 40px; width: 300px;
+  }
+  .search:focus-within { border-color: var(--border-focus); box-shadow: var(--ring-focus); }
+  .search input { border: 0; background: transparent; outline: none; width: 100%; font: var(--text-body); color: var(--fg1); }
+  .search input::placeholder { color: var(--fg4); }
+  .search .ico { color: var(--fg4); }
+  .btn-primary {
+    display: flex; align-items: center; gap: 9px;
+    background: var(--vbg-amber); color: var(--fg-inverse);
+    font: var(--text-body-strong); padding: 0 18px; height: 40px;
+    border: 0; border-radius: var(--r-sm); cursor: pointer;
+    box-shadow: 0 1px 2px rgba(184,111,0,.35);
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .btn-primary:hover { background: var(--vbg-amber-600); }
+
+  .content { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 36px 40px 40px; }
+
+  /* ---- stat strip ---- */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+  .stat {
+    background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md); padding: 18px 20px;
+  }
+  .stat .label { font: var(--text-label); text-transform: uppercase; letter-spacing: var(--tracking-overline); color: var(--fg3); }
+  .stat .value { margin-top: 10px; font: var(--text-display); letter-spacing: -0.01em; color: var(--fg1); }
+  .stat .value .unit { font: var(--text-h3); color: var(--fg3); margin-left: 4px; }
+  .stat .delta { margin-top: 6px; font: var(--text-caption); color: var(--fg3); display: flex; align-items: center; gap: 6px; }
+  .stat .delta b { color: var(--status-success-fg); font-weight: 600; }
+
+  /* ---- columns ---- */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: stretch; }
+
+  .panel { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--r-md); overflow: hidden; }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid var(--border-subtle);
+  }
+  .panel-head .overline { color: var(--fg2); }
+  .panel-head .link { font: var(--text-label); color: var(--fg-accent); text-decoration: none; cursor: pointer; }
+  .panel-head .link:hover { text-decoration: underline; }
+
+  /* ---- badge ---- */
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: var(--text-label); padding: 3px 9px; border-radius: var(--r-full);
+    white-space: nowrap;
+  }
+  .badge .dot { width: 7px; height: 7px; border-radius: var(--r-full); }
+  .badge.generated { background: var(--status-generated-bg); color: var(--status-generated-fg); }
+  .badge.generated .dot { background: var(--status-generated); }
+  .badge.validated { background: var(--status-validated-bg); color: var(--status-validated-fg); }
+  .badge.validated .dot { background: var(--status-validated); }
+  .badge.draft { background: var(--status-pending-bg); color: var(--status-pending-fg); }
+  .badge.draft .dot { background: var(--status-pending); }
+  .badge.computing { background: var(--status-info-bg); color: var(--status-info-fg); }
+  .badge.computing .dot { background: var(--status-info); }
+</style>
+</head>
+<body>
+<div id="fit">
+  <div id="stage" data-screen-label="VBG Dashboard">
+
+    <!-- ============ SIDEBAR ============ -->
+    <vbg-sidebar active="dashboard"></vbg-sidebar>
+
+    <!-- ============ MAIN ============ -->
+    <main class="main">
+
+
+      <div class="content">
+        <div class="main-header">
+          <div class="greeting">
+            <h1>Dashboard</h1>
+            <p>Wednesday, 4 June 2026 · 5 recipes available</p>
+          </div>
+          <div class="actions">
+            <div class="search">
+              <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+              <input type="text" placeholder="Search projects, rules, elements…">
+            </div>
+            <a class="btn-primary" href="Companies.html" style="text-decoration:none;">
+              <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
+              Add company
+            </a>
+          </div>
+        </div>
+        <!-- stat strip -->
+        <div class="stats">
+          <div class="stat">
+            <div class="label">Active tenants</div>
+            <div class="value">21</div>
+            <div class="delta"><b>+3</b> this quarter</div>
+          </div>
+          <div class="stat">
+            <div class="label">Generated elements</div>
+            <div class="value">8 420</div>
+            <div class="delta">across all buildings</div>
+          </div>
+          <div class="stat">
+            <div class="label">Recipes</div>
+            <div class="value">5</div>
+            <div class="delta">2 recently added</div>
+          </div>
+          <div class="stat">
+            <div class="label">Validated area</div>
+            <div class="value">41 280<span class="unit">m²</span></div>
+            <div class="delta"><b>96%</b> pass rate</div>
+          </div>
+        </div>
+
+        <div class="cols">
+          <!-- recent companies -->
+          <section class="panel">
+            <div class="panel-head">
+              <span class="overline">Recent companies</span>
+              <a class="link" href="Companies.html">View all</a>
+            </div>
+            <vbg-companies-table limit="6" compact="true"></vbg-companies-table>
+          </section>
+
+          <!-- activity -->
+          <section class="panel">
+            <div class="panel-head">
+              <span class="overline">Activity</span>
+              <a class="link" href="#">View all</a>
+            </div>
+            <vbg-activity-feed></vbg-activity-feed>
+          </section>
+        </div>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<script>
+  (function () {
+    var stage = document.getElementById('stage');
+    function fit() {
+      var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      stage.style.transform = 'scale(' + s + ')';
+    }
+    window.addEventListener('resize', fit);
+    if (window.ResizeObserver) { new ResizeObserver(fit).observe(document.documentElement); }
+    window.addEventListener('load', fit);
+    setTimeout(fit, 250);
+    fit();
+  })();
+</script>
+</body>
+</html>

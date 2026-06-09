@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VBG — User profile</title>
+<link rel="stylesheet" href="styles/tokens.css">
+<script src="components/sidebar.js" defer></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; width: 100%;
+    background: #0b0d11;
+    font-family: var(--font-sans);
+    color: var(--fg1);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  /* ---- scale-to-fit stage ---- */
+  #fit { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #stage {
+    width: 1920px; height: 1080px;
+    flex: 0 0 auto;
+    background: var(--bg-app);
+    display: flex; min-height: 0;
+    transform-origin: center center;
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,.55);
+  }
+
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .overline {
+    font: var(--text-label); text-transform: uppercase;
+    letter-spacing: var(--tracking-overline); color: var(--fg3);
+  }
+  .ico { display: inline-flex; }
+  .ico svg { display: block; }
+
+  /* ============================ MAIN ============================ */
+  .main { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
+
+  /* ---- top header strip ---- */
+  .page-head {
+    flex: 0 0 auto;
+    padding: 24px 44px 18px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .head-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+  .crumb {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+    font: var(--text-label); color: var(--fg3); white-space: nowrap;
+  }
+  .crumb a { color: var(--fg3); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: color var(--dur-fast) var(--ease-out); }
+  .crumb a:hover { color: var(--fg-accent); }
+  .crumb .sep { color: var(--fg4); }
+  .crumb .cur { color: var(--fg1); }
+  .page-head h1 { font: var(--text-display); letter-spacing: -0.01em; line-height: 1.1; }
+  .page-head p { margin: 7px 0 0; font: var(--text-body); color: var(--fg3); max-width: 620px; }
+
+  .btn-signout {
+    flex: 0 0 auto; display: inline-flex; align-items: center; gap: 9px; white-space: nowrap;
+    background: var(--bg-surface); border: 1px solid var(--border-strong);
+    border-radius: var(--r-sm); height: 42px; padding: 0 18px;
+    font: var(--text-body-strong); color: var(--fg2); cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+  .btn-signout:hover { background: var(--status-error-bg); border-color: var(--status-error); color: var(--status-error-fg); }
+  .btn-signout .ico { color: var(--fg3); transition: color var(--dur-fast) var(--ease-out); }
+  .btn-signout:hover .ico { color: var(--status-error); }
+
+  /* ---- scroll region ---- */
+  .scroll { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 40px 44px 48px; }
+  .page { display: flex; flex-direction: column; gap: 22px; max-width: 1040px; margin: 0 auto; }
+
+  /* ============================ CARD ============================ */
+  .card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--r-md); overflow: visible; }
+  .card-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 22px; border-bottom: 1px solid var(--border-subtle);
+  }
+  .card-head .ch-ic {
+    width: 30px; height: 30px; flex: 0 0 30px; border-radius: var(--r-sm);
+    background: var(--bg-sunken); border: 1px solid var(--border-subtle);
+    display: grid; place-items: center; color: var(--fg3);
+  }
+  .card-head h2 { font: var(--text-h3); }
+  .card-head p { margin: 2px 0 0; font: var(--text-caption); color: var(--fg3); }
+  .card-head .ttl { min-width: 0; }
+  .card-head .head-act { margin-left: auto; }
+  .card-body { padding: 22px; display: flex; flex-direction: column; gap: 20px; }
+  .card-foot {
+    display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+    padding: 14px 22px; border-top: 1px solid var(--border-subtle); background: var(--bg-app);
+    border-radius: 0 0 var(--r-md) var(--r-md);
+  }
+  .card-foot .foot-note { margin-right: auto; font: var(--text-caption); color: var(--fg3); display: flex; align-items: center; gap: 7px; }
+  .card-foot .foot-note.saved { color: var(--status-success-fg); }
+  .card-foot .foot-note.saved .ico { color: var(--status-success); }
+
+  /* ============================ FIELDS ============================ */
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field > label { font: var(--text-label); color: var(--fg2); display: flex; align-items: center; gap: 6px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .input, .select {
+    font: var(--text-body); height: 44px; padding: 0 13px;
+    border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+    background: var(--bg-surface); color: var(--fg1); width: 100%;
+    outline: none; transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .input::placeholder { color: var(--fg4); }
+  .input:focus, .select:focus { border-color: var(--vbg-amber); box-shadow: var(--ring-focus); }
+  .input.mono { font-family: var(--font-mono); }
+  .select {
+    appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236B7382' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; padding-right: 38px;
+  }
+  .hint { font: var(--text-caption); color: var(--fg3); }
+
+  /* ============================ PROFILE TOP (merged identity) ============================ */
+  .profile-top { display: grid; grid-template-columns: auto 1fr auto; gap: 26px; padding: 26px; border-bottom: 1px solid var(--border-subtle); }
+  .avatar-wrap { position: relative; aspect-ratio: 1 / 1; min-height: 96px; border-radius: var(--r-full); overflow: hidden; }
+  .profile-fields { flex: 1 1 auto; min-width: 0; }
+  .profile-aside { flex: 0 0 auto; align-self: flex-start; display: flex; }
+  .avatar-lg {
+    width: 100%; height: 100%; border-radius: var(--r-full);
+    background: var(--vbg-amber); color: var(--fg-inverse);
+    display: grid; place-items: center; overflow: hidden;
+    font: 600 40px/1 var(--font-sans); letter-spacing: 0.01em;
+    background-size: cover; background-position: center;
+    box-shadow: 0 2px 6px rgba(184,111,0,.30);
+  }
+  .avatar-cam {
+    position: absolute; right: -2px; bottom: -2px;
+    width: 32px; height: 32px; border-radius: var(--r-full);
+    background: var(--bg-surface); border: 1px solid var(--border-strong);
+    display: grid; place-items: center; color: var(--fg2); cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .avatar-cam:hover { background: var(--vbg-amber-50); border-color: var(--vbg-amber-300); color: var(--vbg-amber-700); }
+  .profile-id { flex: 1 1 auto; min-width: 0; padding-top: 3px; }
+  .profile-id .id-name { font: var(--text-h2); color: var(--fg1); }
+  .profile-id .id-role { margin-top: 5px; font: var(--text-sm); color: var(--fg2); }
+  .profile-id .id-email { margin-top: 3px; font: var(--text-mono-sm); color: var(--fg3); }
+  .id-badge {
+    margin-top: 14px; display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+    font: var(--text-label); padding: 4px 11px; border-radius: var(--r-full);
+    background: var(--status-validated-bg); color: var(--status-validated-fg);
+  }
+  .id-badge .dot { width: 7px; height: 7px; border-radius: var(--r-full); background: var(--status-validated); }
+
+  .profile-aside { flex: 0 0 auto; align-self: flex-start; display: flex; }
+  .meta-list { border: 1px solid var(--border-subtle); border-radius: var(--r-sm); background: var(--bg-app); overflow: hidden; }
+  .meta-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 10px 14px; border-bottom: 1px solid var(--border-subtle);
+  }
+  .meta-row:last-child { border-bottom: 0; }
+  .meta-row .mk { font: var(--text-label); text-transform: uppercase; letter-spacing: var(--tracking-overline); color: var(--fg4); white-space: nowrap; }
+  .meta-row .mv { font: var(--text-mono-sm); color: var(--fg1); text-align: right; white-space: nowrap; }
+  .section-label { color: var(--fg4); margin-bottom: -4px; }
+
+  /* ============================ THEME SEGMENTED ============================ */
+  .segmented { display: inline-flex; background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 3px; gap: 3px; align-self: flex-start; }
+  .seg {
+    display: flex; align-items: center; gap: 8px; padding: 8px 18px;
+    border: 0; background: transparent; border-radius: 3px;
+    font: var(--text-body-strong); color: var(--fg2); cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .seg .ico { color: var(--fg4); transition: color var(--dur-fast) var(--ease-out); }
+  .seg:hover { color: var(--fg1); }
+  .seg.sel { background: var(--bg-surface); color: var(--fg1); box-shadow: var(--shadow-sm); }
+  .seg.sel .ico { color: var(--vbg-amber-700); }
+
+  /* ============================ TOGGLE SWITCH ============================ */
+  .switch {
+    width: 38px; height: 22px; flex: 0 0 38px; border-radius: var(--r-full);
+    background: var(--slate-300); position: relative; cursor: pointer; border: 0; padding: 0;
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .switch::after {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+    border-radius: var(--r-full); background: #fff; box-shadow: var(--shadow-sm);
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+  .switch.on { background: var(--vbg-amber); }
+  .switch.on::after { transform: translateX(16px); }
+  .switch:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+
+  /* ============================ NOTIFICATIONS ============================ */
+  .notif-table { display: flex; flex-direction: column; }
+  .notif-head, .notif-row { display: grid; grid-template-columns: 1fr 88px 88px; align-items: center; gap: 16px; }
+  .notif-head { padding: 0 0 12px; border-bottom: 1px solid var(--border-subtle); }
+  .notif-head .nh-col { font: var(--text-label); text-transform: uppercase; letter-spacing: var(--tracking-overline); color: var(--fg4); text-align: center; }
+  .notif-head .nh-col:first-child { text-align: left; }
+  .notif-row { padding: 16px 0; border-bottom: 1px solid var(--border-subtle); }
+  .notif-row:last-child { border-bottom: 0; }
+  .notif-row .nr-main { min-width: 0; }
+  .notif-row .nr-title { font: var(--text-body-strong); color: var(--fg1); }
+  .notif-row .nr-desc { margin-top: 3px; font: var(--text-caption); color: var(--fg3); }
+  .notif-row .nr-cell { display: flex; justify-content: center; }
+
+  /* ============================ SECURITY ROW ============================ */
+  .stack-row {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-app);
+  }
+  .stack-row .sr-ic {
+    width: 38px; height: 38px; flex: 0 0 38px; border-radius: var(--r-sm);
+    background: var(--bg-sunken); border: 1px solid var(--border-subtle);
+    display: grid; place-items: center; color: var(--fg2);
+  }
+  .stack-row .sr-main { min-width: 0; flex: 1 1 auto; }
+  .stack-row .sr-title { font: var(--text-body-strong); color: var(--fg1); }
+  .stack-row .sr-sub { margin-top: 2px; font: var(--text-caption); color: var(--fg3); }
+
+  /* ============================ SESSIONS ============================ */
+  .sessions { display: flex; flex-direction: column; }
+  .session {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 0; border-bottom: 1px solid var(--border-subtle);
+    transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  }
+  .session:last-child { border-bottom: 0; }
+  .session.removing { opacity: 0; transform: translateX(12px); }
+  .session .se-ic {
+    width: 42px; height: 42px; flex: 0 0 42px; border-radius: var(--r-sm);
+    background: var(--bg-sunken); border: 1px solid var(--border-subtle);
+    display: grid; place-items: center; color: var(--fg2);
+  }
+  .session.current .se-ic { background: var(--vbg-amber-50); border-color: var(--vbg-amber-100); color: var(--vbg-amber-700); }
+  .session .se-main { min-width: 0; flex: 1 1 auto; }
+  .session .se-device { display: flex; align-items: center; gap: 9px; }
+  .session .se-name { font: var(--text-body-strong); color: var(--fg1); }
+  .session .se-meta { margin-top: 4px; font: var(--text-mono-sm); color: var(--fg3); display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  .session .se-meta .se-dot { width: 3px; height: 3px; border-radius: var(--r-full); background: var(--fg4); }
+  .badge-current {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: var(--text-label); padding: 2px 9px; border-radius: var(--r-full);
+    background: var(--status-success-bg); color: var(--status-success-fg);
+  }
+  .badge-current .dot { width: 6px; height: 6px; border-radius: var(--r-full); background: var(--status-success); }
+  .se-revoke {
+    flex: 0 0 auto; display: inline-flex; align-items: center; gap: 7px;
+    background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+    height: 34px; padding: 0 14px; font: var(--text-label); color: var(--fg2); cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+  .se-revoke:hover { background: var(--status-error-bg); border-color: var(--status-error); color: var(--status-error-fg); }
+
+  /* ============================ BUTTONS ============================ */
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 9px; white-space: nowrap;
+    background: var(--vbg-amber); color: var(--fg-inverse);
+    font: var(--text-body-strong); padding: 0 18px; height: 42px;
+    border: 0; border-radius: var(--r-sm); cursor: pointer;
+    box-shadow: 0 1px 2px rgba(184,111,0,.35);
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .btn-primary:hover { background: var(--vbg-amber-600); }
+  .btn-primary:disabled { background: var(--slate-200); color: var(--fg4); cursor: not-allowed; box-shadow: none; }
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: var(--r-sm); height: 42px; padding: 0 18px;
+    font: var(--text-body-strong); color: var(--fg2); cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+  .btn-ghost:hover { background: var(--bg-hover); border-color: var(--border-strong); color: var(--fg1); }
+  .btn-ghost.full { width: 100%; justify-content: center; }
+  .btn-ghost.danger:hover { background: var(--status-error-bg); border-color: var(--status-error); color: var(--status-error-fg); }
+  .btn-ghost.danger:hover .ico { color: var(--status-error); }
+  .btn-ghost .ico { color: var(--fg3); }
+  .btn-sm { height: 36px; padding: 0 14px; font: var(--text-label); }
+
+  /* ============================ MODALS ============================ */
+  .scrim {
+    position: absolute; inset: 0; z-index: 100;
+    background: rgba(14,17,22,.52);
+    display: none; align-items: center; justify-content: center; padding: 40px;
+    backdrop-filter: blur(2px);
+  }
+  .scrim.open { display: flex; animation: fadeIn var(--dur-base) var(--ease-out); }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .dialog {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: var(--r-lg); box-shadow: var(--shadow-lg); width: 460px; max-width: 100%;
+    animation: dlgIn var(--dur-base) var(--ease-out);
+  }
+  @keyframes dlgIn { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
+  .dlg-head { padding: 22px 24px 18px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: flex-start; gap: 13px; }
+  .dlg-head .dh-ic { width: 38px; height: 38px; flex: 0 0 38px; border-radius: var(--r-sm); background: var(--vbg-amber-50); border: 1px solid var(--vbg-amber-100); display: grid; place-items: center; color: var(--vbg-amber-700); }
+  .dlg-head .dh-ic.danger { background: var(--status-error-bg); border-color: var(--status-error-bg); color: var(--status-error); }
+  .dlg-head h3 { font: var(--text-h2); }
+  .dlg-head p { margin: 5px 0 0; font: var(--text-sm); color: var(--fg3); }
+  .dlg-head .dh-x { margin-left: auto; width: 32px; height: 32px; border-radius: var(--r-sm); border: 1px solid transparent; background: transparent; color: var(--fg4); cursor: pointer; display: grid; place-items: center; transition: background var(--dur-fast), color var(--dur-fast); }
+  .dlg-head .dh-x:hover { background: var(--bg-hover); color: var(--fg1); }
+  .dlg-body { padding: 22px 24px; display: flex; flex-direction: column; gap: 18px; }
+  .dlg-body > p.dlg-text { font: var(--text-body); color: var(--fg2); margin: 0; }
+  .dlg-foot { padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: flex-end; gap: 12px; background: var(--bg-app); border-radius: 0 0 var(--r-lg) var(--r-lg); }
+  .pw-hint { font: var(--text-caption); color: var(--fg3); display: flex; align-items: center; gap: 6px; }
+  .pw-hint.err { color: var(--status-error-fg); }
+  .pw-hint.err .ok-tick { display: none; }
+  .pw-strength { display: flex; gap: 5px; margin-top: 3px; }
+  .pw-strength .bar { height: 4px; flex: 1 1 0; border-radius: var(--r-full); background: var(--slate-200); transition: background var(--dur-fast) var(--ease-out); }
+  .field.invalid .input { border-color: var(--status-error); }
+  .btn-danger {
+    display: inline-flex; align-items: center; gap: 9px;
+    background: var(--status-error); color: #fff;
+    font: var(--text-body-strong); padding: 0 18px; height: 42px;
+    border: 0; border-radius: var(--r-sm); cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .btn-danger:hover { background: var(--status-error-fg); }
+
+  .s-ic-success {
+    width: 64px; height: 64px; border-radius: var(--r-full);
+    background: var(--status-success-bg); color: var(--status-success);
+    display: grid; place-items: center; margin: 6px auto 0;
+    animation: pop var(--dur-slow) var(--ease-out);
+  }
+  @keyframes pop { 0% { transform: scale(.7); opacity: 0; } 60% { transform: scale(1.06); } 100% { transform: scale(1); opacity: 1; } }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+</style>
+</head>
+<body>
+<div id="fit">
+  <div id="stage" data-screen-label="User profile">
+
+    <!-- ============ SIDEBAR ============ -->
+    <vbg-sidebar active="profile"></vbg-sidebar>
+
+    <!-- ============ MAIN ============ -->
+    <main class="main">
+
+      <!-- scrollable content -->
+      <div class="scroll">
+        <div class="page">
+
+          <!-- ============ PROFILE (identity + details) ============ -->
+          <section class="card">
+            <div class="profile-top">
+              <div class="avatar-wrap">
+                <div class="avatar-lg" id="avatar-lg">SK</div>
+                <button class="avatar-cam" id="avatar-cam" aria-label="Change profile picture">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                </button>
+                <input type="file" id="avatar-file" accept="image/*" class="sr-only">
+              </div>
+              <div class="profile-fields">
+                <div class="grid-2">
+                  <div class="field">
+                    <label for="i-name">Full name</label>
+                    <input class="input" id="i-name" type="text" value="Sanne Koenders" autocomplete="off">
+                  </div>
+                  <div class="field">
+                    <label for="i-email">Email address</label>
+                    <input class="input mono" id="i-email" type="email" value="s.koenders@vbg.io" autocomplete="off">
+                  </div>
+                  <div class="field">
+                    <label for="i-title">Job title</label>
+                    <input class="input" id="i-title" type="text" value="Structural engineer" autocomplete="off">
+                  </div>
+                  <div class="field">
+                    <label for="i-company">Company</label>
+                    <input class="input" id="i-company" type="text" value="VBG Engineering" autocomplete="off">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card-foot">
+              <button class="btn-ghost btn-sm danger" id="btn-signout-2">
+                <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></span>
+                Sign out
+              </button>
+              <div class="foot-note" id="profile-note"></div>
+              <button class="btn-ghost btn-sm" id="profile-reset">Cancel</button>
+              <button class="btn-primary btn-sm" id="profile-save">Update profile</button>
+            </div>
+          </section>
+
+            <!-- Preferences -->
+            <section class="card">
+              <div class="card-head">
+                <span class="ch-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                <div class="ttl">
+                  <h2>Preferences</h2>
+                  <p>Language and appearance settings for your account.</p>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="field" style="max-width: 320px;">
+                  <label for="i-lang">Preferred language</label>
+                  <select class="select" id="i-lang">
+                    <option value="en">English (International)</option>
+                    <option value="nl">Nederlands</option>
+                    <option value="de">Deutsch</option>
+                    <option value="fr">Français</option>
+                  </select>
+                  <span class="hint">Affects interface labels. Measurements always use SI units.</span>
+                </div>
+                <div class="field">
+                  <label>Theme preference</label>
+                  <div class="segmented" id="theme-seg" role="radiogroup" aria-label="Theme preference">
+                    <button class="seg sel" data-theme="light" role="radio" aria-checked="true">
+                      <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></span>
+                      Light
+                    </button>
+                    <button class="seg" data-theme="dark" role="radio" aria-checked="false">
+                      <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>
+                      Dark
+                    </button>
+                    <button class="seg" data-theme="system" role="radio" aria-checked="false">
+                      <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg></span>
+                      System
+                    </button>
+                  </div>
+                  <span class="hint" id="theme-hint">Light theme is used across the workspace. The 3D viewport always renders on a dark canvas.</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- Notifications -->
+            <section class="card">
+              <div class="card-head">
+                <span class="ch-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg></span>
+                <div class="ttl">
+                  <h2>Notification preferences</h2>
+                  <p>Choose how you want to be notified about engineering activity.</p>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="notif-table" id="notif-table">
+                  <div class="notif-head">
+                    <div class="nh-col">Notification</div>
+                    <div class="nh-col">In-app</div>
+                    <div class="nh-col">Email</div>
+                  </div>
+                  <!-- rows injected by JS -->
+                </div>
+              </div>
+            </section>
+
+            <!-- Security -->
+            <section class="card">
+              <div class="card-head">
+                <span class="ch-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                <div class="ttl">
+                  <h2>Security</h2>
+                  <p>Manage your password and account access.</p>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="stack-row">
+                  <span class="sr-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                  <div class="sr-main">
+                    <div class="sr-title">Password</div>
+                    <div class="sr-sub">Last changed 4 February 2026 · 124 days ago</div>
+                  </div>
+                  <button class="btn-ghost btn-sm" id="btn-changepw">Change password</button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Active sessions -->
+            <section class="card">
+              <div class="card-head">
+                <span class="ch-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg></span>
+                <div class="ttl">
+                  <h2>Active sessions</h2>
+                  <p>Devices currently signed in to your account.</p>
+                </div>
+                <div class="head-act">
+                  <button class="btn-ghost btn-sm danger" id="btn-revoke-all">
+                    <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>
+                    Revoke all other sessions
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="sessions" id="sessions"><!-- rows injected by JS --></div>
+              </div>
+            </section>
+
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ============ CHANGE PASSWORD MODAL ============ -->
+    <div class="scrim" id="pw-scrim">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="pw-title">
+        <div class="dlg-head">
+          <span class="dh-ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+          <div>
+            <h3 id="pw-title">Change password</h3>
+            <p>Choose a strong password you don't use elsewhere.</p>
+          </div>
+          <button class="dh-x" id="pw-close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        </div>
+        <div class="dlg-body" id="pw-form-body">
+          <div class="field">
+            <label for="pw-current">Current password</label>
+            <input class="input" id="pw-current" type="password" placeholder="Enter current password" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="pw-new">New password</label>
+            <input class="input" id="pw-new" type="password" placeholder="At least 10 characters" autocomplete="off">
+            <div class="pw-strength" id="pw-strength"><span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span></div>
+            <span class="pw-hint" id="pw-new-hint">Use 10+ characters with letters, numbers, and a symbol.</span>
+          </div>
+          <div class="field">
+            <label for="pw-confirm">Confirm new password</label>
+            <input class="input" id="pw-confirm" type="password" placeholder="Re-enter new password" autocomplete="off">
+            <span class="pw-hint" id="pw-confirm-hint" style="display:none;">Passwords do not match.</span>
+          </div>
+        </div>
+        <div class="dlg-body" id="pw-success-body" style="display:none; align-items:center; text-align:center;">
+          <span class="s-ic-success"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+          <h3 style="font: var(--text-h2); margin-top: 6px;">Password updated</h3>
+          <p class="dlg-text" style="text-align:center; max-width: 320px;">Your password has been changed. Use it the next time you sign in.</p>
+        </div>
+        <div class="dlg-foot" id="pw-foot">
+          <button class="btn-ghost btn-sm" id="pw-cancel">Cancel</button>
+          <button class="btn-primary btn-sm" id="pw-submit" disabled>Update password</button>
+        </div>
+        <div class="sr-only" id="pw-live" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <!-- ============ REVOKE ALL CONFIRM MODAL ============ -->
+    <div class="scrim" id="revoke-scrim">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="rv-title">
+        <div class="dlg-head">
+          <span class="dh-ic danger"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
+          <div>
+            <h3 id="rv-title">Revoke all other sessions?</h3>
+            <p>All devices except this one will be signed out immediately.</p>
+          </div>
+          <button class="dh-x" id="rv-close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        </div>
+        <div class="dlg-foot">
+          <button class="btn-ghost btn-sm" id="rv-cancel">Cancel</button>
+          <button class="btn-danger btn-sm" id="rv-confirm">Revoke sessions</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ SIGN OUT CONFIRM MODAL ============ -->
+    <div class="scrim" id="signout-scrim">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="so-title">
+        <div class="dlg-head">
+          <span class="dh-ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></span>
+          <div>
+            <h3 id="so-title">Sign out?</h3>
+            <p>You will be returned to the sign-in screen.</p>
+          </div>
+          <button class="dh-x" id="so-close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        </div>
+        <div class="dlg-foot">
+          <button class="btn-ghost btn-sm" id="so-cancel">Cancel</button>
+          <button class="btn-primary btn-sm" id="so-confirm">Sign out</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="components/user-profile.js?v=1"></script>
+<script>
+  /* ---------- scale-to-fit ---------- */
+  (function () {
+    var stage = document.getElementById('stage');
+    function fit() {
+      var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      stage.style.transform = 'scale(' + s + ')';
+    }
+    window.addEventListener('resize', fit);
+    if (window.ResizeObserver) { new ResizeObserver(fit).observe(document.documentElement); }
+    window.addEventListener('load', fit);
+    setTimeout(fit, 250);
+    fit();
+  })();
+</script>
+</body>
+</html>

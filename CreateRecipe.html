@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VBG — Create recipe</title>
+<link rel="stylesheet" href="styles/tokens.css">
+<script src="components/sidebar.js" defer></script>
+<script src="components/recipes-table.js" defer></script>
+<script src="components/recipe-detail-data.js" defer></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; width: 100%;
+    background: #0b0d11;
+    font-family: var(--font-sans);
+    color: var(--fg1);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  /* ---- scale-to-fit stage ---- */
+  #fit { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #stage {
+    width: 1920px; height: 1080px;
+    flex: 0 0 auto;
+    background: var(--bg-app);
+    display: flex; min-height: 0;
+    transform-origin: center center;
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,.55);
+    position: relative;
+  }
+
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .overline { font: var(--text-label); text-transform: uppercase; letter-spacing: var(--tracking-overline); color: var(--fg3); }
+  .ico { display: inline-flex; }
+  .ico svg { display: block; }
+
+  /* ============================ MAIN ============================ */
+  .main { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
+
+  /* ---- top header strip ---- */
+  .page-head { flex: 0 0 auto; padding: 26px 44px 14px; }
+  .crumb { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font: var(--text-label); color: var(--fg3); white-space: nowrap; }
+  .crumb a { color: var(--fg3); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: color var(--dur-fast) var(--ease-out); }
+  .crumb a:hover { color: var(--fg-accent); }
+  .crumb .sep { color: var(--fg4); }
+  .crumb .cur { color: var(--fg1); }
+  .page-head h1 { font: var(--text-display); letter-spacing: -0.01em; line-height: 1.1; }
+  .page-head p { margin: 7px 0 0; font: var(--text-body); color: var(--fg3); max-width: 640px; }
+
+  /* ---- scroll region holds two columns ---- */
+  .scroll { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 18px 44px 40px; }
+  .cols { display: grid; grid-template-columns: minmax(0,1fr) 540px; gap: 32px; align-items: start; max-width: 1640px; }
+  .form-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  .summary-col { position: sticky; top: 0; display: flex; flex-direction: column; gap: 20px; height: var(--summary-h, auto); min-height: 0; }
+
+  /* ============================ CARD ============================ */
+  .card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--r-md); overflow: visible; }
+  .card-head { padding: 18px 22px 16px; border-bottom: 1px solid var(--border-subtle); }
+  .card-head .ttl { display: flex; align-items: center; gap: 11px; }
+  .card-head h2 { font: var(--text-h3); white-space: nowrap; }
+  .card-head p { margin: 6px 0 0; font: var(--text-sm); color: var(--fg3); }
+  .card-num {
+    width: 24px; height: 24px; flex: 0 0 24px; border-radius: var(--r-full);
+    background: var(--bg-sunken); border: 1px solid var(--border-subtle);
+    display: grid; place-items: center; font: var(--text-mono-sm); color: var(--fg3);
+    transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+  }
+  .card-num.done { background: var(--vbg-amber); border-color: var(--vbg-amber); color: #fff; animation: wpop var(--dur-base) var(--ease-out); }
+  .card-body { padding: 22px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* ============================ FIELDS ============================ */
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field > label { font: var(--text-label); color: var(--fg2); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .field > label .req { color: var(--status-error); }
+  .field .charcount { margin-left: auto; font: var(--text-mono-sm); color: var(--fg4); }
+  .field .sublabel { font: var(--text-caption); color: var(--fg4); margin-left: 8px; font-weight: 400; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  .input, .select, textarea.input {
+    font: var(--text-body); height: 44px; padding: 0 13px;
+    border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+    background: var(--bg-surface); color: var(--fg1); width: 100%;
+    outline: none; transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .input::placeholder, textarea.input::placeholder { color: var(--fg4); }
+  .input:focus, .select:focus, textarea.input:focus { border-color: var(--vbg-amber); box-shadow: var(--ring-focus); }
+  textarea.input { height: auto; min-height: 84px; padding: 11px 13px; resize: vertical; line-height: 1.5; }
+  .input.err, .select.err { border-color: var(--status-error); }
+
+  .code-display {
+    height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 13px;
+    background: var(--bg-sunken); border: 1px solid var(--border);
+    border-radius: var(--r-sm); color: var(--fg1); font-family: var(--font-mono);
+    letter-spacing: .02em; user-select: all;
+  }
+  .code-display .cd-val { white-space: nowrap; }
+  .code-display.empty .cd-val { color: var(--fg4); }
+  .code-display .auto-tag { margin-left: auto; user-select: none; }
+  .auto-tag {
+    display: inline-flex; align-items: center; font: var(--text-caption); color: var(--fg3);
+    background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xs); padding: 2px 8px; font-family: var(--font-sans);
+  }
+  .hint { font: var(--text-caption); color: var(--fg3); }
+  .hint.err { color: var(--status-error-fg); display: none; align-items: center; gap: 5px; }
+  .field.invalid .hint.err { display: flex; }
+  .field.invalid .hint:not(.err) { display: none; }
+
+  /* read-only derived value (discipline / team) */
+  .readout {
+    display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 13px;
+    background: var(--bg-app); border: 1px solid var(--border-subtle); border-radius: var(--r-sm);
+  }
+  .readout .ro-ic { color: var(--fg4); display: inline-flex; }
+  .readout .ro-val { font: var(--text-body); color: var(--fg1); }
+  .readout .ro-val.empty { color: var(--fg4); }
+  .readout .ro-auto { margin-left: auto; }
+
+  /* segmented control (owner) */
+  .seg { display: flex; gap: 0; height: 44px; border: 1px solid var(--border-strong); border-radius: var(--r-sm); overflow: hidden; background: var(--bg-surface); }
+  .seg button {
+    flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 8px;
+    border: 0; background: transparent; cursor: pointer; font: var(--text-body-strong); color: var(--fg2);
+    border-right: 1px solid var(--border-subtle); transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button .ico { color: var(--fg4); }
+  .seg button:hover { background: var(--bg-hover); color: var(--fg1); }
+  .seg button.on { background: var(--vbg-amber-50); color: var(--fg-accent); }
+  .seg button.on .ico { color: var(--vbg-amber); }
+
+  /* ============================ TAGS ============================ */
+  .tag-edit { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .tag-edit .tg { display: inline-flex; align-items: center; gap: 7px; background: var(--vbg-amber-50); border: 1px solid var(--vbg-amber-300); color: var(--fg-accent); border-radius: var(--r-full); padding: 5px 7px 5px 12px; font: var(--text-label); }
+  .tag-edit .tg button { border: 0; background: transparent; color: var(--fg-accent); cursor: pointer; opacity: .6; display: inline-grid; place-items: center; padding: 0; }
+  .tag-edit .tg button:hover { opacity: 1; }
+  .tag-input {
+    border: 1px dashed var(--border-strong); background: transparent; color: var(--fg2);
+    border-radius: var(--r-full); padding: 6px 14px; font: var(--text-label); min-width: 130px;
+    outline: none; transition: border-color var(--dur-fast) var(--ease-out);
+  }
+  .tag-input::placeholder { color: var(--fg4); }
+  .tag-input:focus { border-style: solid; border-color: var(--vbg-amber); }
+  .tag-sugs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .tag-sug { border: 1px solid var(--border); background: var(--bg-surface); color: var(--fg3); border-radius: var(--r-full); padding: 4px 11px; font: var(--text-label); cursor: pointer; transition: border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out); }
+  .tag-sug:hover { border-color: var(--vbg-amber-300); color: var(--fg-accent); }
+  .tag-sug.used { opacity: .4; pointer-events: none; }
+
+  /* ============================ SELECTABLE CARDS ============================ */
+  .scard {
+    position: relative; text-align: left; cursor: pointer; width: 100%;
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: var(--r-md); padding: 14px;
+    transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+  }
+  .scard:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+  .scard:focus-visible { outline: none; border-color: var(--vbg-amber); box-shadow: var(--ring-focus); }
+  .scard.sel { border-color: var(--vbg-amber); background: var(--vbg-amber-50); box-shadow: 0 0 0 1px var(--vbg-amber); }
+  .scard .s-check {
+    position: absolute; top: 11px; right: 11px;
+    width: 20px; height: 20px; border-radius: var(--r-full);
+    background: var(--vbg-amber); color: #fff; display: none; place-items: center;
+    box-shadow: 0 1px 2px rgba(184,111,0,.4);
+  }
+  .scard.sel .s-check { display: grid; }
+
+  /* category cards */
+  .cat-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .cat-card { padding: 14px 13px 13px; display: flex; flex-direction: column; gap: 11px; }
+  .cat-card .c-ic {
+    width: 36px; height: 36px; border-radius: var(--r-sm);
+    background: var(--bg-sunken); border: 1px solid var(--border-subtle);
+    display: grid; place-items: center; color: var(--fg2);
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .cat-card.sel .c-ic { background: var(--vbg-amber-100); border-color: var(--vbg-amber-100); color: var(--vbg-amber-700); }
+  .cat-card .c-body { display: flex; flex-direction: column; min-width: 0; }
+  .cat-card .c-name { font: var(--text-body-strong); color: var(--fg1); }
+  .cat-card .c-sub { font: var(--text-caption); color: var(--fg3); margin-top: 2px; }
+  .field.invalid .cat-group .cat-card { border-color: var(--status-error); }
+
+  /* starting-point cards */
+  .start-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .start-card { padding: 16px; display: flex; flex-direction: column; gap: 0; }
+  .start-card .sp-ic {
+    width: 40px; height: 40px; flex: 0 0 40px; border-radius: var(--r-sm);
+    background: var(--bg-sunken); border: 1px solid var(--border-subtle);
+    display: grid; place-items: center; color: var(--fg2); margin-bottom: 13px;
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .start-card.sel .sp-ic { background: var(--vbg-amber-100); border-color: var(--vbg-amber-100); color: var(--vbg-amber-700); }
+  .start-card .sp-name { font: var(--text-body-strong); color: var(--fg1); }
+  .start-card .sp-desc { font: var(--text-sm); color: var(--fg3); margin-top: 6px; line-height: 1.5; }
+
+  /* duplicate combo (revealed) */
+  .dup-reveal { display: none; margin-top: 4px; }
+  .dup-reveal.show { display: block; animation: revealIn var(--dur-base) var(--ease-out); }
+  @keyframes revealIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  .combo { position: relative; }
+  .combo-input {
+    display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 13px;
+    border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+    background: var(--bg-surface); transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .combo-input .ico { color: var(--fg4); flex: 0 0 auto; }
+  .combo-input input { border: 0; background: transparent; outline: none; width: 100%; font: var(--text-body); color: var(--fg1); }
+  .combo-input input::placeholder { color: var(--fg4); }
+  .combo.open .combo-input, .combo-input:focus-within { border-color: var(--vbg-amber); box-shadow: var(--ring-focus); }
+  .combo-menu {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 50;
+    background: var(--bg-raised); border: 1px solid var(--border);
+    border-radius: var(--r-md); box-shadow: var(--shadow-pop);
+    padding: 5px; display: none; flex-direction: column; max-height: 280px; overflow: auto;
+  }
+  .combo.open .combo-menu { display: flex; animation: popIn var(--dur-fast) var(--ease-out); }
+  @keyframes popIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  .opt { display: flex; align-items: center; gap: 12px; padding: 10px 11px; border-radius: var(--r-sm); cursor: pointer; text-align: left; border: 0; background: transparent; width: 100%; transition: background var(--dur-fast) var(--ease-out); }
+  .opt:hover, .opt.active { background: var(--bg-hover); }
+  .opt .opt-ic { width: 34px; height: 34px; flex: 0 0 34px; border-radius: var(--r-sm); background: var(--bg-sunken); border: 1px solid var(--border-subtle); display: grid; place-items: center; color: var(--fg3); }
+  .opt .opt-main { min-width: 0; display: flex; flex-direction: column; flex: 1 1 auto; }
+  .opt .opt-name { font: var(--text-body-strong); color: var(--fg1); }
+  .opt .opt-sub { font: var(--text-mono-sm); color: var(--fg3); margin-top: 2px; }
+  .opt .opt-cat { font: var(--text-label); color: var(--fg4); flex: 0 0 auto; }
+  .opt mark { background: var(--vbg-amber-100); color: var(--fg-accent); border-radius: 2px; padding: 0 1px; }
+  .opt-empty { padding: 16px 12px; font: var(--text-sm); color: var(--fg3); text-align: center; }
+
+  .selected-card { display: flex; align-items: flex-start; gap: 13px; padding: 14px 15px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-app); }
+  .selected-card .sc-ic { width: 38px; height: 38px; flex: 0 0 38px; border-radius: var(--r-sm); background: var(--vbg-amber-50); border: 1px solid var(--vbg-amber-100); display: grid; place-items: center; color: var(--vbg-amber-700); }
+  .selected-card .sc-main { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
+  .selected-card .sc-name { font: var(--text-body-strong); color: var(--fg1); }
+  .selected-card .sc-sub { font: var(--text-mono-sm); color: var(--fg3); margin-top: 3px; }
+  .selected-card .sc-clear { flex: 0 0 auto; width: 32px; height: 32px; border-radius: var(--r-sm); border: 1px solid transparent; background: transparent; color: var(--fg4); cursor: pointer; display: grid; place-items: center; transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out); }
+  .selected-card .sc-clear:hover { background: var(--bg-surface); border-color: var(--border); color: var(--fg1); }
+
+  /* ============================ OUTPUTS GRID ============================ */
+  .out-note { font: var(--text-caption); color: var(--fg4); margin-bottom: 4px; }
+  .out-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .out-card { display: flex; align-items: flex-start; gap: 12px; padding: 13px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-surface); cursor: pointer; transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out); }
+  .out-card:hover { border-color: var(--border-strong); }
+  .out-card.on { border-color: var(--vbg-amber-300); background: var(--vbg-amber-50); }
+  .out-card .oc-ico { width: 34px; height: 34px; flex: none; border-radius: var(--r-sm); background: var(--bg-sunken); border: 1px solid var(--border-subtle); display: grid; place-items: center; color: var(--fg3); }
+  .out-card.on .oc-ico { background: var(--vbg-amber-100); border-color: transparent; color: var(--vbg-amber-700); }
+  .out-card .oc-txt { flex: 1 1 auto; min-width: 0; }
+  .out-card .oc-lb { display: block; font: var(--text-body-strong); color: var(--fg1); }
+  .out-card .oc-st { display: block; font: var(--text-caption); color: var(--fg3); margin-top: 2px; }
+  .out-card.on .oc-st { color: var(--status-success-fg); }
+  .oc-toggle { width: 36px; height: 20px; flex: none; border-radius: var(--r-full); background: var(--slate-300); position: relative; transition: background var(--dur-fast) var(--ease-out); }
+  .oc-toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: var(--r-full); background: #fff; box-shadow: var(--shadow-sm); transition: transform var(--dur-fast) var(--ease-out); }
+  .out-card.on .oc-toggle { background: var(--vbg-amber); }
+  .out-card.on .oc-toggle::after { transform: translateX(16px); }
+
+  /* ============================ SUMMARY PANEL ============================ */
+  .summary { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+  .summary-head { display: flex; align-items: center; gap: 11px; padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-sunken); }
+  .summary-head .ico { color: var(--fg3); }
+  .summary-head .overline { color: var(--fg2); white-space: nowrap; }
+  .summary-head .ready { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: var(--text-label); padding: 4px 10px; border-radius: var(--r-full); background: var(--status-pending-bg); color: var(--status-pending-fg); white-space: nowrap; transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out); }
+  .summary-head .ready .dot { width: 7px; height: 7px; border-radius: var(--r-full); background: var(--status-pending); }
+  .summary-head .ready.go { background: var(--status-success-bg); color: var(--status-success-fg); }
+  .summary-head .ready.go .dot { background: var(--status-success); }
+  .summary-body { padding: 6px 20px 14px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+  .sgroup { padding: 13px 0; border-bottom: 1px solid var(--border-subtle); }
+  .sgroup:last-child { border-bottom: 0; }
+  .sgroup .sg-label { font: var(--text-label); text-transform: uppercase; letter-spacing: var(--tracking-overline); color: var(--fg4); margin-bottom: 10px; white-space: nowrap; }
+  .srow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 5px 0; }
+  .srow .srow-ck {
+    width: 18px; height: 18px; flex: 0 0 18px; border-radius: var(--r-full);
+    background: var(--bg-sunken); border: 1px solid var(--border); color: transparent;
+    display: grid; place-items: center;
+    transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+  }
+  .srow.done .srow-ck { background: var(--status-validated-bg); border-color: var(--status-validated-bg); color: var(--status-validated); animation: wpop var(--dur-base) var(--ease-out); }
+  .srow .k { font: var(--text-sm); color: var(--fg3); flex: 0 0 auto; }
+  .srow .v { font: var(--text-body-strong); color: var(--fg1); text-align: right; flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .srow .v.mono { font: var(--text-mono); }
+  .srow .v.empty { color: var(--fg4); font-weight: 400; }
+  .srow .v .vbadge { display: inline-flex; align-items: center; gap: 6px; font: var(--text-label); padding: 3px 9px; border-radius: var(--r-full); background: var(--status-pending-bg); color: var(--status-pending-fg); }
+  .srow .v .vbadge .dot { width: 6px; height: 6px; border-radius: var(--r-full); background: var(--status-pending); }
+  @keyframes wpop { 0% { transform: scale(.5); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .srow.done .srow-ck { animation: none; } .card-num.done { animation: none; } }
+
+  /* summary actions */
+  .sum-actions { display: flex; flex-direction: column; gap: 12px; flex: 0 0 auto; }
+  .sum-actions .status { display: flex; align-items: center; gap: 10px; font: var(--text-sm); color: var(--fg3); }
+  .sum-actions .status .ico { color: var(--fg4); }
+  .sum-actions .status.go { color: var(--status-success-fg); }
+  .sum-actions .status.go .ico { color: var(--status-success); }
+  .sum-btns { display: flex; gap: 10px; }
+  .sum-btns > * { flex: 1 1 0; justify-content: center; }
+  .sum-create { width: 100%; justify-content: center; height: 48px; font-size: 15px; }
+
+  .btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--r-sm); height: 48px; padding: 0 20px; font: var(--text-body-strong); color: var(--fg2); cursor: pointer; transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out); }
+  .btn-ghost:hover { background: var(--bg-hover); border-color: var(--border-strong); color: var(--fg1); }
+  .btn-primary { display: inline-flex; align-items: center; gap: 10px; background: var(--vbg-amber); color: var(--fg-inverse); font: var(--text-body-strong); font-size: 15px; padding: 0 26px; height: 48px; border: 0; border-radius: var(--r-sm); cursor: pointer; box-shadow: 0 1px 2px rgba(184,111,0,.35); transition: background var(--dur-fast) var(--ease-out); }
+  .btn-primary:hover { background: var(--vbg-amber-600); }
+  .btn-primary:disabled { background: var(--slate-200); color: var(--fg4); cursor: not-allowed; box-shadow: none; }
+
+  /* ============================ MODALS ============================ */
+  .scrim { position: absolute; inset: 0; z-index: 100; background: rgba(14,17,22,.52); display: none; align-items: center; justify-content: center; padding: 40px; backdrop-filter: blur(2px); }
+  .scrim.open { display: flex; animation: fadeIn var(--dur-base) var(--ease-out); }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .dialog { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); width: 480px; max-width: 100%; animation: dlgIn var(--dur-base) var(--ease-out); }
+  @keyframes dlgIn { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
+  .dlg-body { padding: 22px 24px; display: flex; flex-direction: column; gap: 18px; }
+  .dlg-foot { padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: flex-end; gap: 12px; background: var(--bg-app); border-radius: 0 0 var(--r-lg) var(--r-lg); }
+
+  /* creating / loading dialog */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .creating { width: 440px; }
+  .creating .dlg-body { align-items: center; text-align: center; padding: 40px 36px 30px; gap: 0; }
+  .cring-wrap { position: relative; width: 150px; height: 150px; }
+  .cring { width: 150px; height: 150px; transform: rotate(-90deg); display: block; }
+  .cring-track { fill: none; stroke: var(--bg-sunken); stroke-width: 8; }
+  .cring-fill { fill: none; stroke: var(--vbg-amber); stroke-width: 8; stroke-linecap: round; transition: stroke var(--dur-base) var(--ease-out); }
+  .cring.done .cring-fill { stroke: var(--status-success); }
+  .cring-spin { position: absolute; inset: 0; border-radius: var(--r-full); background: conic-gradient(from 0deg, transparent 0deg, var(--vbg-amber-100) 70deg, transparent 140deg); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px)); mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px)); animation: spin 1.4s linear infinite; opacity: .9; transition: opacity var(--dur-base) var(--ease-out); }
+  .cring-wrap.done .cring-spin { opacity: 0; }
+  .cring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .cring-pct { font: var(--text-h1); font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--fg1); letter-spacing: -0.01em; }
+  .cring-ic { display: none; color: var(--status-success); }
+  .cring-wrap.done .cring-pct { display: none; }
+  .cring-wrap.done .cring-ic { display: grid; place-items: center; animation: pop var(--dur-slow) var(--ease-out); }
+  .creating h3 { font: var(--text-h2); margin-top: 22px; }
+  .creating .cr-step { margin-top: 8px; min-height: 20px; font: var(--text-body); color: var(--fg3); transition: opacity var(--dur-fast) var(--ease-out); }
+  .creating .cr-step.swap { opacity: 0; }
+  .creating .dlg-foot { justify-content: center; background: var(--bg-surface); border-top: 1px solid var(--border-subtle); padding: 16px 24px 20px; }
+  .creating .dlg-foot .btn-ghost { min-width: 130px; }
+
+  /* success dialog */
+  .success { width: 520px; }
+  .success .dlg-body { align-items: center; text-align: center; padding: 36px 30px 26px; }
+  .success .s-ic { width: 68px; height: 68px; border-radius: var(--r-full); background: var(--status-success-bg); color: var(--status-success); display: grid; place-items: center; margin-bottom: 8px; animation: pop var(--dur-slow) var(--ease-out); }
+  @keyframes pop { 0% { transform: scale(.7); opacity: 0; } 60% { transform: scale(1.06); } 100% { transform: scale(1); opacity: 1; } }
+  .success h3 { font: var(--text-h1); }
+  .success > .dlg-body > p { margin: 8px 0 0; font: var(--text-body); color: var(--fg3); max-width: 380px; }
+  .s-summary { width: 100%; margin-top: 22px; border: 1px solid var(--border-subtle); border-radius: var(--r-md); background: var(--bg-app); overflow: hidden; }
+  .s-summary .srow { padding: 11px 16px; border-bottom: 1px solid var(--border-subtle); }
+  .s-summary .srow:last-child { border-bottom: 0; }
+  .s-summary .srow .k { font: var(--text-label); text-transform: uppercase; letter-spacing: var(--tracking-overline); color: var(--fg4); }
+  .success .dlg-foot { flex-direction: column; gap: 10px; align-items: stretch; background: var(--bg-surface); border-top: 1px solid var(--border-subtle); padding: 18px 24px 22px; }
+  .success .dlg-foot .row-btns { display: flex; gap: 12px; }
+  .success .dlg-foot .row-btns > * { flex: 1 1 0; }
+  .btn-tertiary { background: transparent; border: 0; color: var(--fg-accent); font: var(--text-body-strong); height: 40px; cursor: pointer; border-radius: var(--r-sm); transition: background var(--dur-fast); }
+  .btn-tertiary:hover { background: var(--vbg-amber-50); }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+</style>
+</head>
+<body>
+<div id="fit">
+  <div id="stage" data-screen-label="Create recipe">
+
+    <!-- ============ SIDEBAR ============ -->
+    <vbg-sidebar active="recipes"></vbg-sidebar>
+
+    <!-- ============ MAIN ============ -->
+    <main class="main">
+
+      <!-- page header -->
+      <header class="page-head">
+        <div class="crumb">
+          <a href="Recipes.html"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>Recipes</a>
+          <span class="sep">/</span>
+          <span class="cur">Create recipe</span>
+        </div>
+        <h1>Create recipe</h1>
+        <p>Define a new piece of generation logic. Set its identity and classification, choose a starting point, and select the artefacts it produces. Structure, rules and parameters are authored in the editor after creation.</p>
+      </header>
+
+      <!-- scrollable content -->
+      <div class="scroll">
+        <div class="cols">
+
+          <!-- ============ FORM COLUMN ============ -->
+          <div class="form-col">
+
+            <!-- 1 · Recipe information -->
+            <section class="card">
+              <div class="card-head">
+                <div class="ttl"><span class="card-num">1</span><h2>Recipe information</h2></div>
+                <p>Identify the recipe. The code is assigned automatically and is immutable.</p>
+              </div>
+              <div class="card-body">
+                <div class="field" id="f-name">
+                  <label for="i-name">Name <span class="req">*</span><span class="charcount"><span id="namecount">0</span>/120</span></label>
+                  <input class="input" id="i-name" type="text" maxlength="120" placeholder="e.g. Orthogonal column grid" autocomplete="off">
+                  <div class="hint err"><span class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></span>Recipe name is required</div>
+                </div>
+                <div class="field">
+                  <label>Code <span class="sublabel">assigned on creation</span></label>
+                  <div class="code-display empty" id="code-display"><span class="cd-val">—</span><span class="auto-tag">Auto</span></div>
+                </div>
+                <div class="field">
+                  <label for="i-desc">Description<span class="charcount"><span id="desccount">0</span>/220</span></label>
+                  <textarea class="input" id="i-desc" maxlength="220" placeholder="Describe what this recipe generates and the engineering intent it captures."></textarea>
+                </div>
+              </div>
+            </section>
+
+            <!-- 2 · Classification -->
+            <section class="card">
+              <div class="card-head">
+                <div class="ttl"><span class="card-num">2</span><h2>Classification</h2></div>
+                <p>Categorise the recipe so it surfaces for the right discipline and engineers.</p>
+              </div>
+              <div class="card-body">
+                <div class="field" id="f-cat">
+                  <label>Category <span class="req">*</span></label>
+                  <div class="cat-group" id="cat-group" role="radiogroup" aria-label="Category"></div>
+                  <div class="hint err"><span class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></span>Select a category</div>
+                </div>
+                <div class="grid-2">
+                  <div class="field">
+                    <label>Discipline <span class="sublabel">from category</span></label>
+                    <div class="readout" id="discipline-ro">
+                      <span class="ro-ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/></svg></span>
+                      <span class="ro-val empty" id="discipline-val">Set by category</span>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label>Owner</label>
+                    <div class="seg" id="owner-seg" role="radiogroup" aria-label="Owner">
+                      <button type="button" data-owner="company" class="on" aria-checked="true"><span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg></span>Company</button>
+                      <button type="button" data-owner="vbg" aria-checked="false"><span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V8.5a1 1 0 0 1 .4-.8l6-4.5a1 1 0 0 1 1.2 0l6 4.5a1 1 0 0 1 .4.8V20"/><path d="M3 20h18"/></svg></span>VBG platform</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="field">
+                  <label>Tags <span class="sublabel">optional</span></label>
+                  <div class="tag-edit" id="tag-edit">
+                    <input class="tag-input" id="tag-input" type="text" placeholder="Add tag + Enter" autocomplete="off" maxlength="24">
+                  </div>
+                  <div class="tag-sugs" id="tag-sugs"></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- 3 · Starting point -->
+            <section class="card">
+              <div class="card-head">
+                <div class="ttl"><span class="card-num">3</span><h2>Starting point</h2></div>
+                <p>Begin from scratch, from the platform baseline, or by duplicating an existing recipe.</p>
+              </div>
+              <div class="card-body">
+                <div class="field" id="f-start">
+                  <div class="start-group" id="start-group"></div>
+                  <div class="hint err"><span class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></span>Choose a starting point</div>
+                </div>
+                <div class="dup-reveal" id="dup-reveal">
+                  <div class="field">
+                    <label>Recipe to duplicate <span class="req">*</span></label>
+                    <div class="combo" id="dup-combo">
+                      <div class="combo-input">
+                        <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+                        <input id="dup-search" type="text" placeholder="Search recipes by name, code or tag…" autocomplete="off">
+                      </div>
+                      <div class="combo-menu" id="dup-menu"></div>
+                    </div>
+                    <div id="dup-selected"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- 4 · Outputs -->
+            <section class="card">
+              <div class="card-head">
+                <div class="ttl"><span class="card-num">4</span><h2>Outputs</h2></div>
+                <p>Select the artefacts this recipe generates. Defaults are suggested from the category.</p>
+              </div>
+              <div class="card-body">
+                <div class="out-note" id="out-note">Select a category to suggest a default set.</div>
+                <div class="out-grid" id="out-grid"></div>
+              </div>
+            </section>
+
+          </div>
+
+          <!-- ============ SUMMARY COLUMN ============ -->
+          <aside class="summary-col">
+            <section class="summary" aria-label="Recipe summary">
+              <div class="summary-head">
+                <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="M8 7h6"/><path d="M8 11h8"/></svg></span>
+                <span class="overline">Recipe summary</span>
+                <span class="ready" id="ready-pill"><span class="dot"></span><span class="rtxt">Incomplete</span></span>
+              </div>
+              <div class="summary-body">
+                <div class="sgroup">
+                  <div class="sg-label">Identity</div>
+                  <div class="srow" data-check="name"><span class="srow-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="k">Name</span><span class="v empty" data-sum="name">Not set</span></div>
+                  <div class="srow" data-check="code"><span class="srow-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="k">Code</span><span class="v mono empty" data-sum="code">Not set</span></div>
+                </div>
+                <div class="sgroup">
+                  <div class="sg-label">Classification</div>
+                  <div class="srow" data-check="category"><span class="srow-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="k">Category</span><span class="v empty" data-sum="category">Not set</span></div>
+                  <div class="srow"><span class="srow-ck" style="visibility:hidden"></span><span class="k">Discipline</span><span class="v empty" data-sum="discipline">—</span></div>
+                  <div class="srow"><span class="srow-ck" style="visibility:hidden"></span><span class="k">Owner</span><span class="v" data-sum="owner">Company</span></div>
+                  <div class="srow"><span class="srow-ck" style="visibility:hidden"></span><span class="k">Tags</span><span class="v empty" data-sum="tags">None</span></div>
+                </div>
+                <div class="sgroup">
+                  <div class="sg-label">Starting point</div>
+                  <div class="srow" data-check="start"><span class="srow-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="k">Source</span><span class="v empty" data-sum="start">Not chosen</span></div>
+                </div>
+                <div class="sgroup">
+                  <div class="sg-label">Outputs</div>
+                  <div class="srow" data-check="outputs"><span class="srow-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="k">Generated</span><span class="v empty" data-sum="outputs">None selected</span></div>
+                </div>
+                <div class="sgroup">
+                  <div class="sg-label">Lifecycle</div>
+                  <div class="srow"><span class="srow-ck" style="visibility:hidden"></span><span class="k">Initial state</span><span class="v"><span class="vbadge"><span class="dot"></span>Draft</span></span></div>
+                </div>
+              </div>
+            </section>
+
+            <div class="sum-actions">
+              <div class="status" id="status-text">
+                <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+                <span id="status-label">Complete required fields to create the recipe.</span>
+              </div>
+              <div class="sum-btns">
+                <button class="btn-ghost" id="btn-cancel">Cancel</button>
+              </div>
+              <button class="btn-primary sum-create" id="btn-create" disabled>
+                Create recipe
+                <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+              </button>
+            </div>
+          </aside>
+
+        </div>
+      </div>
+
+      <!-- ============ CREATING MODAL ============ -->
+      <div class="scrim" id="creating-scrim">
+        <div class="dialog creating" role="dialog" aria-modal="true" aria-labelledby="cr-title">
+          <div class="dlg-body">
+            <div class="cring-wrap" id="cring-wrap">
+              <div class="cring-spin"></div>
+              <svg class="cring" id="cring" viewBox="0 0 150 150">
+                <circle class="cring-track" cx="75" cy="75" r="64"></circle>
+                <circle class="cring-fill" id="cring-fill" cx="75" cy="75" r="64"></circle>
+              </svg>
+              <div class="cring-center">
+                <span class="cring-pct" id="cring-pct">0%</span>
+                <span class="cring-ic"><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+              </div>
+            </div>
+            <h3 id="cr-title">Creating recipe</h3>
+            <p class="cr-step" id="cr-step">Registering recipe…</p>
+          </div>
+          <div class="dlg-foot">
+            <button class="btn-ghost" id="cr-cancel">Cancel</button>
+          </div>
+          <div class="sr-only" id="cr-live" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <!-- ============ SUCCESS MODAL ============ -->
+      <div class="scrim" id="success-scrim">
+        <div class="dialog success" role="dialog" aria-modal="true" aria-labelledby="su-title">
+          <div class="dlg-body">
+            <span class="s-ic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+            <h3 id="su-title">Recipe created</h3>
+            <p>The recipe has been registered as a draft. Open it to author its structure, rules and parameters.</p>
+            <div class="s-summary">
+              <div class="srow"><span class="k">Name</span><span class="v" data-su="name">—</span></div>
+              <div class="srow"><span class="k">Code</span><span class="v mono" data-su="code">—</span></div>
+              <div class="srow"><span class="k">Category</span><span class="v" data-su="category">—</span></div>
+            </div>
+          </div>
+          <div class="dlg-foot">
+            <div class="row-btns">
+              <button class="btn-ghost" id="su-back">Back to recipes</button>
+              <button class="btn-primary" id="su-open">Open recipe<span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span></button>
+            </div>
+            <button class="btn-tertiary" id="su-another">Create another recipe</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+</div>
+
+<script src="components/create-recipe.js" defer></script>
+<script>
+  /* ---------- scale-to-fit ---------- */
+  (function () {
+    var stage = document.getElementById('stage');
+    function fit() {
+      var w = stage.offsetWidth || 1920, h = stage.offsetHeight || 1080;
+      var s = Math.min(window.innerWidth / w, window.innerHeight / h);
+      stage.style.transform = 'scale(' + s + ')';
+    }
+    window.addEventListener('resize', fit);
+    if (window.ResizeObserver) { new ResizeObserver(fit).observe(document.documentElement); }
+    window.addEventListener('load', fit);
+    setTimeout(fit, 250);
+    fit();
+  })();
+
+  /* ---------- pin summary column to visible scroll area ---------- */
+  (function () {
+    var scroll = document.querySelector('.scroll');
+    var col = document.querySelector('.summary-col');
+    if (!scroll || !col) return;
+    function size() {
+      var cs = getComputedStyle(scroll);
+      var h = scroll.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      col.style.setProperty('--summary-h', h + 'px');
+    }
+    window.addEventListener('resize', size);
+    size();
+    setTimeout(size, 50);
+  })();
+</script>
+</body>
+</html>

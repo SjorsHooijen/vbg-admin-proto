@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VBG — Company detail</title>
+<link rel="stylesheet" href="styles/tokens.css">
+<link rel="stylesheet" href="styles/recipe-detail.css">
+<link rel="stylesheet" href="styles/product-detail.css">
+<link rel="stylesheet" href="styles/company-detail.css">
+<script src="components/sidebar.js" defer></script>
+<script src="components/companies-table.js" defer></script>
+<script src="components/company-detail-data.js" defer></script>
+<script src="components/company-detail-tabs.js" defer></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; width: 100%;
+    background: #0b0d11;
+    font-family: var(--font-sans);
+    color: var(--fg1);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  #fit { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #stage {
+    width: 1920px; height: 1080px;
+    flex: 0 0 auto;
+    background: var(--bg-app);
+    display: flex; min-height: 0;
+    transform-origin: center center;
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,.55);
+    position: relative;
+  }
+</style>
+</head>
+<body>
+<div id="fit">
+  <div id="stage" data-screen-label="VBG Company detail">
+
+    <!-- ============ APP SIDEBAR ============ -->
+    <vbg-sidebar active="companies"></vbg-sidebar>
+
+    <!-- ============ DETAIL ============ -->
+    <main class="rd-main">
+      <header class="rd-header" id="rd-header"><!-- generated --></header>
+      <div class="rd-body">
+        <nav class="rd-nav" id="rd-nav"><!-- generated --></nav>
+        <section class="rd-content" id="rd-content"><!-- generated --></section>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<script>
+  (function () {
+    var stage = document.getElementById('stage');
+    function fit() {
+      var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      stage.style.transform = 'scale(' + s + ')';
+    }
+    window.addEventListener('resize', fit);
+    if (window.ResizeObserver) { new ResizeObserver(fit).observe(document.documentElement); }
+    window.addEventListener('load', fit);
+    setTimeout(fit, 250);
+    fit();
+  })();
+</script>
+<script src="components/company-detail.js" defer></script>
+</body>
+</html>

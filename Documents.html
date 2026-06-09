@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VBG — Documents</title>
+<link rel="stylesheet" href="styles/tokens.css">
+<script src="components/sidebar.js" defer></script>
+<script src="components/doc-viewer.js" defer></script>
+<script src="components/documents-table.js" defer></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; width: 100%;
+    background: #0b0d11;
+    font-family: var(--font-sans);
+    color: var(--fg1);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  /* ---- scale-to-fit stage ---- */
+  #fit { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #stage {
+    width: 1920px; height: 1080px;
+    flex: 0 0 auto;
+    background: var(--bg-app);
+    display: flex; min-height: 0;
+    transform-origin: center center;
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,.55);
+  }
+
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .ico { display: inline-flex; }
+  .ico svg { display: block; }
+
+  /* ============================ MAIN ============================ */
+  .main { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .content { flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 36px 40px 40px; display: flex; flex-direction: column; }
+
+  .main-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 0 24px;
+  }
+  .main-header .greeting h1 { font: var(--text-h1); letter-spacing: -0.01em; }
+  .main-header .greeting p { margin: 4px 0 0; font: var(--text-sm); color: var(--fg3); }
+  .main-header .actions { display: flex; align-items: center; gap: 12px; }
+  .search {
+    display: flex; align-items: center; gap: 9px;
+    background: var(--bg-sunken); border: 1px solid var(--border);
+    border-radius: var(--r-sm); padding: 0 12px; height: 40px; width: 320px;
+  }
+  .search:focus-within { border-color: var(--border-focus); box-shadow: var(--ring-focus); }
+  .search input { border: 0; background: transparent; outline: none; width: 100%; font: var(--text-body); color: var(--fg1); }
+  .search input::placeholder { color: var(--fg4); }
+  .btn-primary {
+    display: flex; align-items: center; gap: 9px;
+    background: var(--vbg-amber); color: var(--fg-inverse);
+    font: var(--text-body-strong); padding: 0 18px; height: 40px;
+    border: 0; border-radius: var(--r-sm); cursor: pointer;
+    box-shadow: 0 1px 2px rgba(184,111,0,.35);
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .btn-primary:hover { background: var(--vbg-amber-600); }
+  .search .ico { color: var(--fg4); }
+
+  /* ---- toolbar (filters above table) ---- */
+  .toolbar {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+  }
+  .seg { display: flex; background: var(--slate-50); border: 1px solid var(--border-subtle); border-radius: var(--r-sm); padding: 3px; gap: 2px; }
+  .seg button {
+    border: 0; background: transparent; cursor: pointer;
+    font: var(--text-label); color: var(--fg2); padding: 6px 12px; border-radius: var(--r-xs);
+    display: flex; align-items: center; gap: 7px;
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+  .seg button .n { font: var(--text-mono-sm); color: var(--fg4); }
+  .seg button:hover { color: var(--fg1); }
+  .seg button.on { background: var(--bg-surface); color: var(--fg1); box-shadow: var(--shadow-sm); }
+  .seg button.on .n { color: var(--fg-accent); }
+  .toolbar .spacer { flex: 1 1 auto; }
+  .ghost-btn {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-sm); height: 36px; padding: 0 14px;
+    font: var(--text-label); color: var(--fg2); cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .ghost-btn:hover { background: var(--bg-hover); border-color: var(--border-strong); color: var(--fg1); }
+  .ghost-btn .ico { color: var(--fg3); }
+
+  /* ============================ TABLE ============================ */
+  .panel { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--r-md); overflow: hidden; }
+  /* table scrolls internally; page header + toolbar stay fixed */
+  .content > .main-header, .content > .toolbar { flex: 0 0 auto; }
+  .content > .panel { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  .panel vbg-documents-table { flex: 1 1 auto; min-height: 0; overflow: auto; display: block; }
+  .panel .tfoot { flex: 0 0 auto; }
+
+  /* table footer */
+  .tfoot {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-top: 1px solid var(--border-subtle);
+    font: var(--text-caption); color: var(--fg3);
+  }
+  .tfoot .pager { display: flex; align-items: center; gap: 4px; }
+  .tfoot .pager button {
+    min-width: 30px; height: 30px; padding: 0 8px; border-radius: var(--r-sm);
+    border: 1px solid var(--border-subtle); background: var(--bg-surface);
+    font: var(--text-mono-sm); color: var(--fg2); cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .tfoot .pager button:hover { background: var(--bg-hover); }
+  .tfoot .pager button.on { background: var(--bg-selected); border-color: var(--vbg-amber-300); color: var(--fg-accent); }
+  .tfoot .pager button:disabled { opacity: .45; cursor: default; }
+</style>
+</head>
+<body>
+<div id="fit">
+  <div id="stage" data-screen-label="VBG Documents">
+
+    <!-- ============ SIDEBAR ============ -->
+    <vbg-sidebar active="documents"></vbg-sidebar>
+
+    <!-- ============ MAIN ============ -->
+    <main class="main">
+      <div class="content">
+        <div class="main-header">
+          <div class="greeting">
+            <h1>Documents</h1>
+            <p>14 documents · 11 projects · 6 file types</p>
+          </div>
+          <div class="actions">
+            <div class="search">
+              <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+              <input type="text" placeholder="Search documents, projects, clients…">
+            </div>
+            <button class="btn-primary">
+              <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg></span>
+              Upload
+            </button>
+          </div>
+        </div>
+
+        <!-- toolbar -->
+        <div class="toolbar">
+          <div class="seg">
+            <button class="on">All <span class="n">14</span></button>
+            <button>Reports <span class="n">7</span></button>
+            <button>Schedules <span class="n">3</span></button>
+            <button>Models <span class="n">1</span></button>
+            <button>Drawings <span class="n">1</span></button>
+            <button>Packages <span class="n">2</span></button>
+          </div>
+          <div class="spacer"></div>
+          <button class="ghost-btn">
+            <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/></svg></span>
+            Filter
+          </button>
+          <button class="ghost-btn">
+            <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5h10"/><path d="M11 9h7"/><path d="M11 13h4"/><path d="m3 17 3 3 3-3"/><path d="M6 18V4"/></svg></span>
+            Sort: Last updated
+          </button>
+        </div>
+
+        <!-- table -->
+        <section class="panel">
+          <vbg-documents-table header="true"></vbg-documents-table>
+
+          <div class="tfoot">
+            <span>Showing 1–14 of 14 documents</span>
+            <div class="pager">
+              <button disabled>‹</button>
+              <button class="on">1</button>
+              <button disabled>›</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<script>
+  /* ---------- scale-to-fit ---------- */
+  (function () {
+    var stage = document.getElementById('stage');
+    function fit() {
+      var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      stage.style.transform = 'scale(' + s + ')';
+    }
+    window.addEventListener('resize', fit);
+    if (window.ResizeObserver) { new ResizeObserver(fit).observe(document.documentElement); }
+    window.addEventListener('load', fit);
+    setTimeout(fit, 250);
+    fit();
+  })();
+</script>
+</body>
+</html>

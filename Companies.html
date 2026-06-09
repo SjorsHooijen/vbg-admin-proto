@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VBG — Companies</title>
+<link rel="stylesheet" href="styles/tokens.css">
+<script src="components/sidebar.js" defer></script>
+<script src="components/companies-table.js" defer></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; width: 100%;
+    background: #0b0d11;
+    font-family: var(--font-sans);
+    color: var(--fg1);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  /* ---- scale-to-fit stage ---- */
+  #fit { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #stage {
+    width: 1920px; height: 1080px;
+    flex: 0 0 auto;
+    background: var(--bg-app);
+    display: flex; min-height: 0;
+    transform-origin: center center;
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,.55);
+    position: relative;
+  }
+
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .ico { display: inline-flex; }
+  .ico svg { display: block; }
+
+  /* ============================ MAIN ============================ */
+  .main { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .content { flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 36px 40px 32px; display: flex; flex-direction: column; }
+
+  .main-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 0 0 24px; flex: 0 0 auto;
+  }
+  .main-header .greeting h1 { font: var(--text-h1); letter-spacing: -0.01em; }
+  .main-header .greeting p { margin: 5px 0 0; font: var(--text-sm); color: var(--fg3); }
+  .main-header .actions { display: flex; align-items: center; gap: 12px; }
+  .search {
+    display: flex; align-items: center; gap: 9px;
+    background: var(--bg-sunken); border: 1px solid var(--border);
+    border-radius: var(--r-sm); padding: 0 12px; height: 40px; width: 320px;
+  }
+  .search:focus-within { border-color: var(--border-focus); box-shadow: var(--ring-focus); }
+  .search input { border: 0; background: transparent; outline: none; width: 100%; font: var(--text-body); color: var(--fg1); }
+  .search input::placeholder { color: var(--fg4); }
+  .search .ico { color: var(--fg4); }
+  .btn-primary {
+    display: flex; align-items: center; gap: 9px;
+    background: var(--vbg-amber); color: var(--fg-inverse);
+    font: var(--text-body-strong); padding: 0 18px; height: 40px;
+    border: 0; border-radius: var(--r-sm); cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(184,111,0,.35);
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .btn-primary:hover { background: var(--vbg-amber-600); }
+
+  /* ============================ SUMMARY STRIP ============================ */
+  .stats { display: flex; gap: 14px; flex: 0 0 auto; padding: 0 0 22px; }
+  .stat {
+    flex: 1 1 0; min-width: 0;
+    background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md); padding: 14px 16px 15px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .stat .slabel {
+    font: var(--text-label); text-transform: uppercase;
+    letter-spacing: var(--tracking-overline); color: var(--fg3);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .stat .slabel .ico { color: var(--fg4); }
+  .stat .svalue { display: flex; align-items: baseline; gap: 9px; }
+  .stat .svalue .num { font: var(--text-h1); font-size: 28px; color: var(--fg1); letter-spacing: -0.01em; line-height: 1; white-space: nowrap; }
+  .stat .svalue .delta { font: var(--text-caption); color: var(--status-success-fg); white-space: nowrap; }
+  .stat .svalue .delta.flat { color: var(--fg4); }
+  .stat .ssub { font: var(--text-caption); color: var(--fg3); }
+  .stat .ssub b { color: var(--fg2); font-weight: 600; }
+
+  /* ============================ WORKSPACE (filters + table) ============================ */
+  .workspace { flex: 1 1 auto; min-height: 0; display: flex; gap: 20px; }
+
+  /* ---- filter sidebar ---- */
+  .filters {
+    flex: 0 0 268px; width: 268px;
+    background: var(--bg-surface); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md); display: flex; flex-direction: column; min-height: 0;
+  }
+  .filters .fhd {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-surface); border-radius: var(--r-md) var(--r-md) 0 0;
+    flex: 0 0 auto;
+  }
+  .filters .fhd .ft { font: var(--text-label); text-transform: uppercase; letter-spacing: var(--tracking-overline); color: var(--fg3); }
+  .filters .fhd .reset {
+    border: 0; background: transparent; cursor: pointer; padding: 0;
+    font: var(--text-caption); color: var(--fg-accent);
+    transition: color var(--dur-fast) var(--ease-out); display: none;
+  }
+  .filters .fhd .reset:hover { color: var(--vbg-amber-600); }
+  .filters .fhd .reset.show { display: inline; }
+  .filters .fbody { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 4px 0 8px; }
+
+  .fsection { padding: 10px 10px 8px; border-bottom: 1px solid var(--border-subtle); }
+  .fsection:last-child { border-bottom: 0; }
+  .fsec-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 8px 2px; cursor: pointer; user-select: none;
+  }
+  .fsec-head .lbl { font: var(--text-label); font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-overline); color: var(--fg2); }
+  .fsec-head .chev { width: 14px; height: 14px; color: var(--fg4); transition: transform var(--dur-fast) var(--ease-out); }
+  .fsection.collapsed .chev { transform: rotate(-90deg); }
+  .fsec-body { margin-top: 4px; display: flex; flex-direction: column; gap: 1px; }
+  .fsec-body.scroll { max-height: 192px; overflow-y: auto; padding-right: 2px; }
+  .fsection.collapsed .fsec-body { display: none; }
+
+  .fopt {
+    display: flex; align-items: center; gap: 10px; padding: 6px 8px;
+    border-radius: var(--r-sm); cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .fopt:hover { background: var(--bg-hover); }
+  .fopt .box {
+    width: 16px; height: 16px; flex: none; border-radius: var(--r-xs);
+    border: 1px solid var(--border-strong); background: var(--bg-surface);
+    display: grid; place-items: center; transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .fopt .box svg { width: 11px; height: 11px; color: var(--fg-inverse); opacity: 0; }
+  .fopt.on .box { background: var(--vbg-amber); border-color: var(--vbg-amber); }
+  .fopt.on .box svg { opacity: 1; }
+  .fopt .radio {
+    width: 16px; height: 16px; flex: none; border-radius: var(--r-full);
+    border: 1px solid var(--border-strong); background: var(--bg-surface);
+    display: grid; place-items: center; transition: border-color var(--dur-fast) var(--ease-out);
+  }
+  .fopt .radio::after { content: ''; width: 8px; height: 8px; border-radius: var(--r-full); background: var(--vbg-amber); transform: scale(0); transition: transform var(--dur-fast) var(--ease-out); }
+  .fopt.on .radio { border-color: var(--vbg-amber); }
+  .fopt.on .radio::after { transform: scale(1); }
+  .fopt .flabel { flex: 1 1 auto; font: var(--text-sm); color: var(--fg2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fopt.on .flabel { color: var(--fg1); }
+  .fopt .fn { font: var(--text-mono-sm); color: var(--fg4); flex: 0 0 auto; }
+
+  /* ---- table column ---- */
+  .table-col { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .toolbar { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
+  .toolbar .rcount { font: var(--text-sm); color: var(--fg2); flex: 0 0 auto; }
+  .toolbar .rcount b { color: var(--fg1); font-weight: 600; }
+  .toolbar .activechips { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; flex: 1 1 auto; }
+  .toolbar .achip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--bg-selected); border: 1px solid var(--vbg-amber-300);
+    border-radius: var(--r-full); padding: 3px 6px 3px 10px;
+    font: var(--text-label); color: var(--fg-accent);
+  }
+  .toolbar .achip button { border: 0; background: transparent; cursor: pointer; color: var(--fg-accent); display: inline-grid; place-items: center; padding: 0; opacity: .7; }
+  .toolbar .achip button:hover { opacity: 1; }
+  .toolbar.has-row { margin-bottom: 14px; }
+
+  .panel { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--r-md); overflow: hidden; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  .panel vbg-companies-table { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; display: block; }
+  .tfoot {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 20px; border-top: 1px solid var(--border-subtle);
+    font: var(--text-caption); color: var(--fg3); flex: 0 0 auto;
+  }
+  .tfoot .pager { display: flex; align-items: center; gap: 4px; }
+  .tfoot .pager button {
+    min-width: 30px; height: 30px; padding: 0 8px; border-radius: var(--r-sm);
+    border: 1px solid var(--border-subtle); background: var(--bg-surface);
+    font: var(--text-mono-sm); color: var(--fg2); cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .tfoot .pager button:hover:not(:disabled) { background: var(--bg-hover); }
+  .tfoot .pager button.on { background: var(--bg-selected); border-color: var(--vbg-amber-300); color: var(--fg-accent); }
+  .tfoot .pager button:disabled { opacity: .45; cursor: default; }
+</style>
+</head>
+<body>
+<div id="fit">
+  <div id="stage" data-screen-label="VBG Companies">
+
+    <!-- ============ APP SIDEBAR ============ -->
+    <vbg-sidebar active="companies"></vbg-sidebar>
+
+    <!-- ============ MAIN ============ -->
+    <main class="main">
+      <div class="content">
+        <div class="main-header">
+          <div class="greeting">
+            <h1>Companies</h1>
+            <p>Every tenant organisation provisioned on the platform — developers, contractors, engineering firms, manufacturers and architects.</p>
+          </div>
+          <div class="actions">
+            <div class="search">
+              <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+              <input id="search" type="text" placeholder="Search companies, tenant ID, domain…">
+            </div>
+            <button class="btn-primary" id="create-btn">
+              <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
+              Add company
+            </button>
+          </div>
+        </div>
+
+        <!-- ============ SUMMARY STRIP ============ -->
+        <div class="stats">
+          <div class="stat">
+            <div class="slabel"><span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/></svg></span>Total companies</div>
+            <div class="svalue"><span class="num mono">26</span><span class="delta">+3 this quarter</span></div>
+            <div class="ssub"><b>21</b> active · <b>2</b> trial · <b>3</b> inactive</div>
+          </div>
+          <div class="stat">
+            <div class="slabel"><span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>Provisioned seats</div>
+            <div class="svalue"><span class="num mono">1 023</span><span class="delta">78% utilised</span></div>
+            <div class="ssub"><b>1 320</b> licensed across all tenants</div>
+          </div>
+          <div class="stat">
+            <div class="slabel"><span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V8.5a1 1 0 0 1 .4-.8l6-4.5a1 1 0 0 1 1.2 0l6 4.5a1 1 0 0 1 .4.8V20"/><path d="M3 20h18"/><path d="M9 20v-5h6v5"/></svg></span>Active projects</div>
+            <div class="svalue"><span class="num mono">327</span><span class="delta">+18 this month</span></div>
+            <div class="ssub">Across <b>21</b> active tenants</div>
+          </div>
+          <div class="stat">
+            <div class="slabel"><span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.42 0z"/></svg></span>Needs attention</div>
+            <div class="svalue"><span class="num mono">5</span><span class="delta flat">review queue</span></div>
+            <div class="ssub"><b>4</b> near seat limit · <b>1</b> suspended</div>
+          </div>
+        </div>
+
+        <div class="workspace">
+
+          <!-- ============ FILTER SIDEBAR ============ -->
+          <aside class="filters">
+            <div class="fhd">
+              <span class="ft">Filters</span>
+              <button class="reset" id="reset-filters">Reset all</button>
+            </div>
+            <div class="fbody" id="fbody"><!-- generated --></div>
+          </aside>
+
+          <!-- ============ TABLE ============ -->
+          <div class="table-col">
+            <div class="toolbar" id="toolbar">
+              <span class="rcount" id="rcount"></span>
+              <div class="activechips" id="activechips"></div>
+            </div>
+
+            <section class="panel">
+              <vbg-companies-table id="ctable"></vbg-companies-table>
+              <div class="tfoot">
+                <span id="footnote">Showing 26 of 26 companies</span>
+                <div class="pager">
+                  <button disabled>‹</button>
+                  <button class="on">1</button>
+                  <button disabled>›</button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+        </div>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<script>
+  /* ---------- scale-to-fit ---------- */
+  (function () {
+    var stage = document.getElementById('stage');
+    function fit() {
+      var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      stage.style.transform = 'scale(' + s + ')';
+    }
+    window.addEventListener('resize', fit);
+    if (window.ResizeObserver) { new ResizeObserver(fit).observe(document.documentElement); }
+    window.addEventListener('load', fit);
+    setTimeout(fit, 250);
+    fit();
+  })();
+
+  /* ---------- keep toolbar margin only when it carries content ---------- */
+  (function () {
+    var toolbar = document.getElementById('toolbar');
+    var chips = document.getElementById('activechips');
+    function syncRow() {
+      var has = (chips && chips.children.length > 0);
+      toolbar.classList.toggle('has-row', has);
+    }
+    if (window.MutationObserver && chips) {
+      new MutationObserver(syncRow).observe(chips, { childList: true });
+    }
+    // rcount always present → always reserve the row
+    toolbar.classList.add('has-row');
+  })();
+</script>
+<script src="components/companies-page.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+/* ============================================================
+   VBG — Company (tenant) detail page styles (tenant-specific)
+   Builds on styles/recipe-detail.css (rd- shell, card, field-row,
+   badge, vtab, timeline, prj-table) and styles/product-detail.css
+   (pd- value styling, lifecycle line, usage stats).
+   Adds: tenant header tile · links · account strip · seat bar ·
+   members table · roles · invoice table · progress.
+   ============================================================ */
+
+/* ---------- header tile shows tenant initials ---------- */
+.rd-tile.cd-tile {
+  background: var(--vbg-amber-50); border-color: var(--vbg-amber-300);
+  color: var(--vbg-amber-700); font: var(--text-h3); font-weight: 600;
+  letter-spacing: 0.01em;
+}
+/* keep the tenant name on one line beside the code + status badge */
+.rd-title-row h1 { white-space: nowrap; }
+.rd-title-row { flex-wrap: wrap; }
+.rd-title-row .rd-code { flex: none; white-space: nowrap; }
+.rd-title-row .badge { flex: none; }
+
+/* status badge: tenant uses warning for suspended */
+.badge.warning { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+.badge.warning .dot { background: var(--status-warning); }
+
+/* ---------- links ---------- */
+.cd-link { color: var(--fg-accent); text-decoration: none; display: inline-flex; align-items: center; gap: 5px; transition: color var(--dur-fast) var(--ease-out); }
+.cd-link:hover { color: var(--vbg-amber-600); text-decoration: underline; }
+.cd-link svg { color: var(--fg4); }
+
+/* industry + region inline */
+.cd-ind { display: inline-flex; align-items: center; gap: 7px; font: var(--text-body-strong); color: var(--fg1); }
+.cd-ind svg { color: var(--fg3); }
+.cd-region { font: var(--text-body-strong); color: var(--fg1); }
+
+/* ---------- plan chip ---------- */
+.cd-plan { display: inline-flex; align-items: center; font: var(--text-label); padding: 4px 11px; border-radius: var(--r-full); }
+.cd-plan.enterprise { background: var(--vbg-amber-100); color: var(--fg-accent); }
+.cd-plan.professional { background: var(--slate-100); color: var(--fg2); }
+.cd-plan.team { background: transparent; border: 1px solid var(--border); color: var(--fg2); }
+.cd-plan.trial { background: transparent; border: 1px dashed var(--border-strong); color: var(--fg3); }
+
+/* generic state pills */
+.cd-pill { display: inline-flex; align-items: center; gap: 6px; font: var(--text-label); padding: 3px 10px; border-radius: var(--r-full); }
+.cd-pill .cd-dot { width: 7px; height: 7px; border-radius: var(--r-full); background: currentColor; }
+.cd-pill svg { margin-left: -1px; }
+.cd-on { background: var(--status-success-bg); color: var(--status-success-fg); }
+.cd-pend { background: var(--status-info-bg); color: var(--status-info-fg); }
+.cd-off { background: var(--slate-100); color: var(--fg3); }
+.cd-warn { color: var(--status-warning-fg); font-weight: 600; }
+.cd-warn2 { background: var(--status-error-bg); color: var(--status-error-fg); }
+
+/* ---------- account strip (overview) ---------- */
+.cd-account { display: grid; grid-template-columns: repeat(5, 1fr); }
+.cd-acct-cell { padding: 16px 18px; border-right: 1px solid var(--border-subtle); }
+.cd-acct-cell:last-child { border-right: 0; }
+.cd-acct-k { font: var(--text-label); text-transform: uppercase; letter-spacing: var(--tracking-overline); color: var(--fg4); margin-bottom: 9px; }
+.cd-acct-v { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+.cd-acct-n { font: var(--text-h2); color: var(--fg1); line-height: 1; letter-spacing: -0.01em; font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cd-acct-sub { font: var(--text-mono-sm); color: var(--fg4); }
+.cd-acct-s { font: var(--text-caption); color: var(--fg3); margin-top: 7px; }
+
+/* ---------- seat allocation bar (members) ---------- */
+.cd-seatbar-wrap { padding: 18px; }
+.cd-seatbar-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.cd-seatbar-top > div:first-child { white-space: nowrap; }
+.cd-seat-big { font: var(--text-display); font-weight: 600; color: var(--fg1); letter-spacing: -0.02em; line-height: 1; font-family: var(--font-mono); }
+.cd-seat-of { font: var(--text-body); color: var(--fg3); margin-left: 4px; white-space: nowrap; }
+.cd-seat-meta { font: var(--text-sm); color: var(--fg3); white-space: nowrap; flex: none; }
+.cd-seatbar { height: 10px; border-radius: var(--r-full); background: var(--slate-150); overflow: hidden; }
+.cd-seatfill { display: block; height: 100%; border-radius: var(--r-full); background: var(--vbg-amber); transition: width var(--dur-base) var(--ease-out); }
+.cd-seatbar.near .cd-seatfill { background: var(--status-warning); }
+
+/* ---------- shared tenant table (members + invoices) ---------- */
+.cd-table { width: 100%; border-collapse: collapse; }
+.cd-table th { text-align: left; font: var(--text-label); text-transform: uppercase; letter-spacing: var(--tracking-overline); color: var(--fg3); padding: 11px 18px; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; }
+.cd-table td { padding: 12px 18px; border-bottom: 1px solid var(--border-subtle); vertical-align: middle; }
+.cd-table tbody tr:last-child td { border-bottom: 0; }
+.cd-table tbody tr:hover { background: var(--bg-hover); }
+.cd-table .th-role { width: 150px; }
+.cd-table .th-status { width: 120px; }
+.cd-table .th-last { width: 168px; }
+
+/* member cell */
+.cd-member { display: flex; align-items: center; gap: 11px; }
+.cd-m-av { width: 32px; height: 32px; flex: none; border-radius: var(--r-full); background: var(--slate-200); color: var(--fg2); display: grid; place-items: center; font: var(--text-label); font-weight: 600; }
+.cd-m-txt { min-width: 0; }
+.cd-m-name { font: var(--text-body-strong); color: var(--fg1); display: flex; align-items: center; gap: 8px; }
+.cd-m-you { font: var(--text-label); color: var(--fg-accent); background: var(--vbg-amber-100); border-radius: var(--r-xs); padding: 1px 7px; }
+.cd-m-mail { font: var(--text-mono-sm); color: var(--fg4); margin-top: 2px; }
+.cd-m-last { white-space: nowrap; }
+.cd-m-last .cd-m-ago { display: block; font: var(--text-caption); color: var(--fg4); margin-top: 1px; }
+
+/* role chip */
+.cd-role { display: inline-flex; align-items: center; font: var(--text-label); padding: 3px 10px; border-radius: var(--r-xs); background: var(--bg-sunken); color: var(--fg2); border: 1px solid var(--border-subtle); white-space: nowrap; }
+.cd-role.r-owner { background: var(--vbg-amber-50); border-color: var(--vbg-amber-300); color: var(--fg-accent); }
+.cd-role.r-admin { background: var(--status-info-bg); border-color: transparent; color: var(--status-info-fg); }
+
+/* ---------- projects tab (extends prj-table) ---------- */
+.cd-prj th.th-prog { width: 150px; }
+.cd-prog { display: flex; align-items: center; gap: 10px; }
+.cd-prog-track { flex: 1 1 auto; height: 6px; border-radius: var(--r-full); background: var(--slate-150); overflow: hidden; min-width: 70px; }
+.cd-prog-fill { display: block; height: 100%; border-radius: var(--r-full); background: var(--vbg-amber); }
+.cd-prog-n { font: var(--text-mono-sm); color: var(--fg2); flex: none; width: 34px; text-align: right; }
+
+/* ---------- billing ---------- */
+.cd-bill-stats { margin-bottom: 18px; }
+.cd-stat-money { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.cd-inv-table .cd-inv-no { color: var(--fg2); }
+.cd-inv-table .cd-inv-seats { font: var(--text-sm); color: var(--fg3); }
+.cd-inv-table .cd-inv-amt { color: var(--fg1); font-weight: 500; }
+.cd-inv-act { text-align: right; }
+.cd-inv-table .th-amt { text-align: left; }
+.cd-inv-table .vact { display: inline-flex; align-items: center; gap: 6px; }
+.cd-inv-table .vact svg { color: var(--fg3); }
+
+/* keep account/lifecycle grids from collapsing oddly on smaller widths */
+@media (max-width: 980px) {
+  .cd-account { grid-template-columns: repeat(2, 1fr); }
+  .cd-acct-cell:nth-child(2n) { border-right: 0; }
+}

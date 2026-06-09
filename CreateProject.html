@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VBG — Start New Project</title>
+<link rel="stylesheet" href="styles/tokens.css">
+<script src="components/sidebar.js" defer></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; width: 100%;
+    background: #0b0d11;
+    font-family: var(--font-sans);
+    color: var(--fg1);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  /* ---- scale-to-fit stage ---- */
+  #fit { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #stage {
+    width: 1920px; height: 1080px;
+    flex: 0 0 auto;
+    background: var(--bg-app);
+    display: flex; min-height: 0;
+    transform-origin: center center;
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,.55);
+  }
+
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .overline {
+    font: var(--text-label); text-transform: uppercase;
+    letter-spacing: var(--tracking-overline); color: var(--fg3);
+  }
+  .ico { display: inline-flex; }
+  .ico svg { display: block; }
+
+  /* ============================ MAIN ============================ */
+  .main { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; padding-bottom: 20px; }
+
+  /* ---- top header strip ---- */
+  .page-head {
+    flex: 0 0 auto;
+    padding: 24px 44px 12px;
+    background: var(--bg-surface);
+  }
+  .head-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+  .btn-import {
+    flex: 0 0 auto; display: inline-flex; align-items: center; gap: 9px;
+    background: var(--bg-surface); border: 1px solid var(--border-strong);
+    border-radius: var(--r-sm); height: 42px; padding: 0 18px;
+    font: var(--text-body-strong); color: var(--fg2); cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+  .btn-import:hover { background: var(--bg-hover); border-color: var(--fg4); color: var(--fg1); }
+  .btn-import .ico { color: var(--fg3); }
+  .crumb {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+    font: var(--text-label); color: var(--fg3); white-space: nowrap;
+  }
+  .crumb a { color: var(--fg3); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: color var(--dur-fast) var(--ease-out); }
+  .crumb a:hover { color: var(--fg-accent); }
+  .crumb .sep { color: var(--fg4); }
+  .crumb .cur { color: var(--fg1); }
+  .page-head h1 { font: var(--text-display); letter-spacing: -0.01em; line-height: 1.1; }
+  .page-head p { margin: 7px 0 0; font: var(--text-body); color: var(--fg3); max-width: 620px; }
+
+  /* ---- scroll region holds two columns ---- */
+  .scroll {
+    flex: 1 1 auto; min-height: 0; overflow: auto;
+    padding: 20px 44px 40px;
+  }
+  .cols {
+    display: grid; grid-template-columns: minmax(0,1fr) 588px;
+    gap: 32px; align-items: start; max-width: 1640px;
+  }
+  .form-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  .summary-col { position: sticky; top: 0; display: flex; flex-direction: column; gap: 20px; height: var(--summary-h, auto); min-height: 0; }
+
+  /* ============================ CARD ============================ */
+  .card {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: var(--r-md); overflow: visible;
+  }
+  .card-head { padding: 18px 22px 16px; border-bottom: 1px solid var(--border-subtle); }
+  .card-head .ttl { display: flex; align-items: center; gap: 11px; }
+  .card-head .ttl .ico { color: var(--fg3); }
+  .card-head h2 { font: var(--text-h3); white-space: nowrap; }
+  .card-head p { margin: 6px 0 0; font: var(--text-sm); color: var(--fg3); }
+  .card-num {
+    width: 24px; height: 24px; flex: 0 0 24px; border-radius: var(--r-full);
+    background: var(--bg-sunken); border: 1px solid var(--border-subtle);
+    display: grid; place-items: center; font: var(--text-mono-sm); color: var(--fg3);
+    transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+  }
+  .card-num.done { background: var(--vbg-amber); border-color: var(--vbg-amber); color: #fff; animation: wpop var(--dur-base) var(--ease-out); }
+  .card-body { padding: 22px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* ============================ FIELDS ============================ */
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field > label { font: var(--text-label); color: var(--fg2); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .field > label .req { color: var(--status-error); }
+  .field .charcount { margin-left: auto; font: var(--text-mono-sm); color: var(--fg4); }
+  .code-display {
+    height: 44px; display: flex; align-items: center; padding: 0 13px;
+    background: var(--bg-sunken); border: 1px solid var(--border);
+    border-radius: var(--r-sm); color: var(--fg1); letter-spacing: .02em;
+    user-select: all;
+  }
+  .code-display.empty { color: var(--fg4); }
+  .auto-tag {
+    display: inline-flex; align-items: center; font: var(--text-caption); color: var(--fg3);
+    background: var(--bg-sunken); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xs); padding: 1px 7px; margin-left: 8px; vertical-align: middle;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  .input, .select {
+    font: var(--text-body); height: 44px; padding: 0 13px;
+    border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+    background: var(--bg-surface); color: var(--fg1); width: 100%;
+    outline: none; transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .input::placeholder { color: var(--fg4); }
+  .input:focus, .select:focus { border-color: var(--vbg-amber); box-shadow: var(--ring-focus); }
+  .input.mono { font-family: var(--font-mono); }
+  .input.err, .select.err { border-color: var(--status-error); }
+  .select {
+    appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236B7382' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; padding-right: 38px;
+  }
+  .select.placeholder { color: var(--fg4); }
+  .hint { font: var(--text-caption); color: var(--fg3); }
+  .hint.err { color: var(--status-error-fg); display: none; align-items: center; gap: 5px; }
+  .field.invalid .hint.err { display: flex; }
+  .field.invalid .hint:not(.err) { display: none; }
+
+  /* ============================ SEARCH SELECT ============================ */
+  .combo { position: relative; }
+  .combo-input {
+    display: flex; align-items: center; gap: 10px;
+    height: 44px; padding: 0 13px;
+    border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+    background: var(--bg-surface); transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .combo-input .ico { color: var(--fg4); flex: 0 0 auto; }
+  .combo-input input { border: 0; background: transparent; outline: none; width: 100%; font: var(--text-body); color: var(--fg1); }
+  .combo-input input::placeholder { color: var(--fg4); }
+  .combo.open .combo-input, .combo-input:focus-within { border-color: var(--vbg-amber); box-shadow: var(--ring-focus); }
+  .combo-menu {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 50;
+    background: var(--bg-raised); border: 1px solid var(--border);
+    border-radius: var(--r-md); box-shadow: var(--shadow-pop);
+    padding: 5px; display: none; flex-direction: column; max-height: 268px; overflow: auto;
+  }
+  .combo.open .combo-menu { display: flex; animation: popIn var(--dur-fast) var(--ease-out); }
+  @keyframes popIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  .opt {
+    display: flex; align-items: center; gap: 12px; padding: 10px 11px;
+    border-radius: var(--r-sm); cursor: pointer; text-align: left; border: 0; background: transparent; width: 100%;
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .opt:hover, .opt.active { background: var(--bg-hover); }
+  .opt .opt-ic {
+    width: 34px; height: 34px; flex: 0 0 34px; border-radius: var(--r-sm);
+    background: var(--bg-sunken); border: 1px solid var(--border-subtle);
+    display: grid; place-items: center; color: var(--fg3);
+  }
+  .opt .opt-main { min-width: 0; display: flex; flex-direction: column; }
+  .opt .opt-name { font: var(--text-body-strong); color: var(--fg1); }
+  .opt .opt-sub { font: var(--text-mono-sm); color: var(--fg3); margin-top: 2px; }
+  .opt mark { background: var(--vbg-amber-100); color: var(--fg-accent); border-radius: 2px; padding: 0 1px; }
+  .opt-empty { padding: 16px 12px; font: var(--text-sm); color: var(--fg3); text-align: center; }
+  .combo-foot { border-top: 1px solid var(--border-subtle); margin: 5px -5px -5px; padding: 5px; }
+  .inline-action {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    border: 0; background: transparent; cursor: pointer; text-align: left;
+    padding: 10px 11px; border-radius: var(--r-sm);
+    font: var(--text-body-strong); color: var(--fg-accent);
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .inline-action:hover { background: var(--vbg-amber-50); }
+  .inline-action .ico { color: var(--vbg-amber); }
+
+  /* ---- selected chip (client / location) ---- */
+  .selected-card {
+    display: flex; align-items: flex-start; gap: 13px;
+    padding: 14px 15px; border: 1px solid var(--border); border-radius: var(--r-sm);
+    background: var(--bg-app);
+  }
+  .selected-card .sc-ic {
+    width: 38px; height: 38px; flex: 0 0 38px; border-radius: var(--r-sm);
+    background: var(--vbg-amber-50); border: 1px solid var(--vbg-amber-100);
+    display: grid; place-items: center; color: var(--vbg-amber-700);
+  }
+  .selected-card .sc-main { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
+  .selected-card .sc-name { font: var(--text-body-strong); color: var(--fg1); }
+  .selected-card .sc-sub { font: var(--text-mono-sm); color: var(--fg3); margin-top: 3px; white-space: pre-line; line-height: 1.5; }
+  .selected-card .sc-clear {
+    flex: 0 0 auto; width: 32px; height: 32px; border-radius: var(--r-sm);
+    border: 1px solid transparent; background: transparent; color: var(--fg4); cursor: pointer;
+    display: grid; place-items: center; transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .selected-card .sc-clear:hover { background: var(--bg-surface); border-color: var(--border); color: var(--fg1); }
+
+  /* ============================ PRESET CARDS ============================ */
+  /* ============================ SELECTABLE CARDS (type + preset) ============================ */
+  .scard {
+    position: relative; text-align: left; cursor: pointer; width: 100%;
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: var(--r-md); padding: 14px;
+    transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+  }
+  .scard:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+  .scard:focus-visible { outline: none; border-color: var(--vbg-amber); box-shadow: var(--ring-focus); }
+  .scard.sel { border-color: var(--vbg-amber); background: var(--vbg-amber-50); box-shadow: 0 0 0 1px var(--vbg-amber); }
+  .scard .s-check {
+    position: absolute; top: 11px; right: 11px;
+    width: 20px; height: 20px; border-radius: var(--r-full);
+    background: var(--vbg-amber); color: #fff; display: none; place-items: center;
+    box-shadow: 0 1px 2px rgba(184,111,0,.4);
+  }
+  .scard.sel .s-check { display: grid; }
+
+  /* ---- compact type cards ---- */
+  .type-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .type-card { padding: 13px 13px 12px; display: flex; flex-direction: column; gap: 11px; }
+  .type-card .t-ic {
+    width: 34px; height: 34px; border-radius: var(--r-sm);
+    background: var(--bg-sunken); border: 1px solid var(--border-subtle);
+    display: grid; place-items: center; color: var(--fg2);
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .type-card.sel .t-ic { background: var(--vbg-amber-100); border-color: var(--vbg-amber-100); color: var(--vbg-amber-700); }
+  .type-card .t-body { display: flex; flex-direction: column; min-width: 0; }
+  .type-card .t-name { font: var(--text-body-strong); color: var(--fg1); }
+  .type-card .t-sub { font: var(--text-caption); color: var(--fg3); margin-top: 2px; }
+  .field.invalid .type-group .type-card { border-color: var(--status-error); }
+
+  /* ---- rich preset cards ---- */
+  .preset-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .preset { padding: 16px; }
+  .preset .p-top { display: flex; align-items: center; gap: 11px; }
+  .preset .p-mark {
+    width: 38px; height: 38px; flex: 0 0 38px; border-radius: var(--r-sm);
+    display: grid; place-items: center; overflow: hidden;
+    background: var(--bg-sunken); border: 1px solid var(--border-subtle);
+  }
+  .preset .p-mark img { width: 25px; height: 25px; object-fit: contain; }
+  .preset .p-name { font: var(--text-body-strong); color: var(--fg1); display: block; }
+  .preset .p-supplier { font: var(--text-mono-sm); color: var(--fg3); margin-top: 2px; display: flex; align-items: center; gap: 5px; }
+  .preset .p-main { min-width: 0; display: flex; flex-direction: column; }
+  .preset .p-desc { margin: 12px 0 0; font: var(--text-sm); color: var(--fg2); }
+  .preset .p-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 13px 0 0; }
+  .preset .p-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    font: var(--text-label); color: var(--fg3);
+    background: var(--bg-sunken); border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xs); padding: 3px 8px;
+  }
+  .preset .p-tag .ico { color: var(--fg4); }
+  .preset.sel .p-tag { background: var(--bg-surface); border-color: var(--vbg-amber-100); }
+
+  /* ============================ SUMMARY PANEL ============================ */
+  .summary {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: var(--r-md); overflow: hidden;
+    display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto;
+  }
+  .summary-head {
+    display: flex; align-items: center; gap: 11px;
+    padding: 16px 20px; border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-sunken);
+  }
+  .summary-head .ico { color: var(--fg3); }
+  .summary-head .overline { color: var(--fg2); white-space: nowrap; }
+  .summary-head .ready {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+    font: var(--text-label); padding: 4px 10px; border-radius: var(--r-full);
+    background: var(--status-pending-bg); color: var(--status-pending-fg); white-space: nowrap;
+    transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+  }
+  .summary-head .ready .dot { width: 7px; height: 7px; border-radius: var(--r-full); background: var(--status-pending); }
+  .summary-head .ready.go { background: var(--status-success-bg); color: var(--status-success-fg); }
+  .summary-head .ready.go .dot { background: var(--status-success); }
+  .summary-body { padding: 6px 20px 16px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+  .sgroup { padding: 14px 0; border-bottom: 1px solid var(--border-subtle); }
+  .sgroup:last-child { border-bottom: 0; }
+  .sgroup .sg-label {
+    font: var(--text-label); text-transform: uppercase; letter-spacing: var(--tracking-overline);
+    color: var(--fg4); margin-bottom: 11px; white-space: nowrap;
+  }
+  .srow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 5px 0; }
+  .srow .srow-ck {
+    width: 18px; height: 18px; flex: 0 0 18px; border-radius: var(--r-full);
+    background: var(--bg-sunken); border: 1px solid var(--border); color: transparent;
+    display: grid; place-items: center;
+    transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  }
+  .srow.done .srow-ck { background: var(--status-validated-bg); border-color: var(--status-validated-bg); color: var(--status-validated); animation: wpop var(--dur-base) var(--ease-out); }
+  .srow .k { font: var(--text-sm); color: var(--fg3); flex: 0 0 auto; }
+  .srow .v { font: var(--text-body-strong); color: var(--fg1); text-align: right; flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .srow .v.mono { font: var(--text-mono); }
+  .srow .v.empty { color: var(--fg4); font-weight: 400; font-style: normal; }
+  .srow .v.lines { white-space: normal; line-height: 1.45; overflow: visible; }
+  @keyframes wpop { 0% { transform: scale(.5); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .srow.done .srow-ck { animation: none; } }
+  /* ============================ SUMMARY ACTIONS (right column footer) ============================ */
+  .sum-actions {
+    display: flex; flex-direction: column; gap: 12px; flex: 0 0 auto;
+  }
+  .sum-actions .status { display: flex; align-items: center; gap: 10px; font: var(--text-sm); color: var(--fg3); }
+  .sum-actions .status .ico { color: var(--fg4); }
+  .sum-actions .status.go { color: var(--status-success-fg); }
+  .sum-actions .status.go .ico { color: var(--status-success); }
+  .sum-btns { display: flex; gap: 10px; }
+  .sum-btns > * { flex: 1 1 0; justify-content: center; }
+  .sum-create { width: 100%; justify-content: center; height: 48px; font-size: 15px; }
+
+  /* ============================ STICKY ACTION BAR ============================ */
+  .actionbar .spacer { flex: 1 1 auto; }
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: var(--r-sm); height: 48px; padding: 0 20px;
+    font: var(--text-body-strong); color: var(--fg2); cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+  .btn-ghost:hover { background: var(--bg-hover); border-color: var(--border-strong); color: var(--fg1); }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--vbg-amber); color: var(--fg-inverse);
+    font: var(--text-body-strong); font-size: 15px; padding: 0 26px; height: 48px;
+    border: 0; border-radius: var(--r-sm); cursor: pointer;
+    box-shadow: 0 1px 2px rgba(184,111,0,.35);
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  .btn-primary:hover { background: var(--vbg-amber-600); }
+  .btn-primary:disabled { background: var(--slate-200); color: var(--fg4); cursor: not-allowed; box-shadow: none; }
+
+  /* ============================ MODALS ============================ */
+  .scrim {
+    position: absolute; inset: 0; z-index: 100;
+    background: rgba(14,17,22,.52);
+    display: none; align-items: center; justify-content: center; padding: 40px;
+    backdrop-filter: blur(2px);
+  }
+  .scrim.open { display: flex; animation: fadeIn var(--dur-base) var(--ease-out); }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .dialog {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: var(--r-lg); box-shadow: var(--shadow-lg); width: 480px; max-width: 100%;
+    animation: dlgIn var(--dur-base) var(--ease-out);
+  }
+  @keyframes dlgIn { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
+  .dlg-head { padding: 22px 24px 18px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: flex-start; gap: 13px; }
+  .dlg-head .dh-ic { width: 38px; height: 38px; flex: 0 0 38px; border-radius: var(--r-sm); background: var(--vbg-amber-50); border: 1px solid var(--vbg-amber-100); display: grid; place-items: center; color: var(--vbg-amber-700); }
+  .dlg-head h3 { font: var(--text-h2); }
+  .dlg-head p { margin: 5px 0 0; font: var(--text-sm); color: var(--fg3); }
+  .dlg-head .dh-x { margin-left: auto; width: 32px; height: 32px; border-radius: var(--r-sm); border: 1px solid transparent; background: transparent; color: var(--fg4); cursor: pointer; display: grid; place-items: center; transition: background var(--dur-fast), color var(--dur-fast); }
+  .dlg-head .dh-x:hover { background: var(--bg-hover); color: var(--fg1); }
+  .dlg-body { padding: 22px 24px; display: flex; flex-direction: column; gap: 18px; }
+  .dlg-foot { padding: 16px 24px; border-top: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: flex-end; gap: 12px; background: var(--bg-app); border-radius: 0 0 var(--r-lg) var(--r-lg); }
+
+  /* ---- import dialog ---- */
+  .import { width: 540px; }
+  .import .im-body { gap: 14px; padding-bottom: 8px; }
+  .im-search { height: 44px; }
+  .im-list { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow: auto; margin: 0 -4px; padding: 2px 4px; }
+  .im-opt {
+    display: flex; align-items: center; gap: 13px; width: 100%; text-align: left;
+    background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+    padding: 12px 14px; cursor: pointer;
+    transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .im-opt:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+  .im-opt.sel { border-color: var(--vbg-amber); background: var(--vbg-amber-50); box-shadow: 0 0 0 1px var(--vbg-amber); }
+  .im-opt .im-ic {
+    width: 38px; height: 38px; flex: 0 0 38px; border-radius: var(--r-sm);
+    background: var(--bg-sunken); border: 1px solid var(--border-subtle);
+    display: grid; place-items: center; color: var(--fg2);
+  }
+  .im-opt.sel .im-ic { background: var(--vbg-amber-100); border-color: var(--vbg-amber-100); color: var(--vbg-amber-700); }
+  .im-opt .im-main { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
+  .im-opt .im-name { font: var(--text-body-strong); color: var(--fg1); }
+  .im-opt .im-meta { font: var(--text-mono-sm); color: var(--fg3); margin-top: 3px; display: flex; align-items: center; gap: 8px; }
+  .im-opt .im-meta .im-dot { width: 3px; height: 3px; border-radius: var(--r-full); background: var(--fg4); }
+  .im-opt .im-kind { font: var(--text-label); text-transform: uppercase; letter-spacing: var(--tracking-overline); color: var(--fg4); flex: 0 0 auto; }
+  .im-opt .im-rad {
+    width: 20px; height: 20px; flex: 0 0 20px; border-radius: var(--r-full);
+    border: 1.5px solid var(--border-strong); display: grid; place-items: center; color: #fff;
+  }
+  .im-opt.sel .im-rad { background: var(--vbg-amber); border-color: var(--vbg-amber); }
+  .im-opt:not(.sel) .im-rad svg { display: none; }
+  .im-empty { padding: 22px 12px; text-align: center; font: var(--text-sm); color: var(--fg3); }
+
+  /* ---- creating / loading dialog ---- */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .creating { width: 440px; }
+  .creating .dlg-body { align-items: center; text-align: center; padding: 40px 36px 30px; gap: 0; }
+  .cring-wrap { position: relative; width: 150px; height: 150px; }
+  .cring { width: 150px; height: 150px; transform: rotate(-90deg); display: block; }
+  .cring-track { fill: none; stroke: var(--bg-sunken); stroke-width: 8; }
+  .cring-fill {
+    fill: none; stroke: var(--vbg-amber); stroke-width: 8; stroke-linecap: round;
+    transition: stroke var(--dur-base) var(--ease-out);
+  }
+  .cring.done .cring-fill { stroke: var(--status-success); }
+  /* slow sweeping shimmer ring while computing */
+  .cring-spin {
+    position: absolute; inset: 0; border-radius: var(--r-full);
+    background: conic-gradient(from 0deg, transparent 0deg, var(--vbg-amber-100) 70deg, transparent 140deg);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px));
+            mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px));
+    animation: spin 1.4s linear infinite; opacity: .9;
+    transition: opacity var(--dur-base) var(--ease-out);
+  }
+  .cring-wrap.done .cring-spin { opacity: 0; }
+  .cring-center {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px;
+  }
+  .cring-pct { font: var(--text-h1); font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--fg1); letter-spacing: -0.01em; }
+  .cring-ic { display: none; color: var(--status-success); }
+  .cring-wrap.done .cring-pct { display: none; }
+  .cring-wrap.done .cring-ic { display: grid; place-items: center; animation: pop var(--dur-slow) var(--ease-out); }
+  .creating h3 { font: var(--text-h2); margin-top: 22px; }
+  .creating .cr-step {
+    margin-top: 8px; min-height: 20px; font: var(--text-body); color: var(--fg3);
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  .creating .cr-step.swap { opacity: 0; }
+  .creating .dlg-foot { justify-content: center; background: var(--bg-surface); border-top: 1px solid var(--border-subtle); padding: 16px 24px 20px; }
+  .creating .dlg-foot .btn-ghost { min-width: 130px; justify-content: center; }
+
+  /* ---- success dialog ---- */
+  .success { width: 520px; }
+  .success .dlg-body { align-items: center; text-align: center; padding: 36px 30px 26px; }
+  .success .s-ic {
+    width: 68px; height: 68px; border-radius: var(--r-full);
+    background: var(--status-success-bg); color: var(--status-success);
+    display: grid; place-items: center; margin-bottom: 8px;
+    animation: pop var(--dur-slow) var(--ease-out);
+  }
+  @keyframes pop { 0% { transform: scale(.7); opacity: 0; } 60% { transform: scale(1.06); } 100% { transform: scale(1); opacity: 1; } }
+  .success h3 { font: var(--text-h1); }
+  .success > .dlg-body > p { margin: 8px 0 0; font: var(--text-body); color: var(--fg3); max-width: 380px; }
+  .s-summary {
+    width: 100%; margin-top: 22px; border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md); background: var(--bg-app); overflow: hidden;
+  }
+  .s-summary .srow { padding: 11px 16px; border-bottom: 1px solid var(--border-subtle); }
+  .s-summary .srow:last-child { border-bottom: 0; }
+  .s-summary .srow .k { font: var(--text-label); text-transform: uppercase; letter-spacing: var(--tracking-overline); color: var(--fg4); }
+  .success .dlg-foot { flex-direction: column; gap: 10px; align-items: stretch; background: var(--bg-surface); border-top: 1px solid var(--border-subtle); padding: 18px 24px 22px; }
+  .success .dlg-foot .row-btns { display: flex; gap: 12px; }
+  .success .dlg-foot .row-btns > * { flex: 1 1 0; justify-content: center; }
+  .btn-tertiary { background: transparent; border: 0; color: var(--fg-accent); font: var(--text-body-strong); height: 40px; cursor: pointer; border-radius: var(--r-sm); transition: background var(--dur-fast); }
+  .btn-tertiary:hover { background: var(--vbg-amber-50); }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+</style>
+</head>
+<body>
+<div id="fit">
+  <div id="stage" data-screen-label="Create Project">
+
+    <!-- ============ SIDEBAR ============ -->
+    <vbg-sidebar active="projects"></vbg-sidebar>
+
+    <!-- ============ MAIN ============ -->
+    <main class="main">
+
+      <!-- page header -->
+      <header class="page-head" style="background-color: rgba(255, 255, 255, 0)">
+        <div class="head-row">
+          <div>
+            <h1>Start new project</h1>
+            <p>Create a project workspace using your organisation's standards and presets.</p>
+          </div>
+        </div>
+      </header>
+
+      <!-- scrollable content -->
+      <div class="scroll">
+        <div class="cols">
+
+          <!-- ============ FORM COLUMN ============ -->
+          <div class="form-col">
+
+            <!-- 1 · Project information -->
+            <section class="card">
+              <div class="card-head">
+                <div class="ttl">
+                  <span class="card-num">1</span>
+                  <h2>Project information</h2>
+                </div>
+                <p>Provide the basic information required to identify the project.</p>
+              </div>
+              <div class="card-body">
+                <div class="field" id="f-name">
+                  <label for="i-name">Project name <span class="req">*</span><span class="charcount"><span id="namecount">0</span>/150</span></label>
+                  <input class="input" id="i-name" type="text" maxlength="150" placeholder="Enter project name" autocomplete="off">
+                  <div class="hint err"><span class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></span>Project name is required</div>
+                </div>
+                <div class="field" id="f-type">
+                  <label>Project type <span class="req">*</span></label>
+                  <div class="scard-group type-group" id="type-group" role="radiogroup" aria-label="Project type"></div>
+                  <div class="hint err"><span class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></span>Select a project type</div>
+                </div>
+              </div>
+            </section>
+
+            <!-- 2 · Client -->
+            <section class="card">
+              <div class="card-head">
+                <div class="ttl">
+                  <span class="card-num">2</span>
+                  <h2>Client</h2>
+                </div>
+                <p>Select the client associated with this project.</p>
+              </div>
+              <div class="card-body">
+                <div class="field" id="f-client">
+                  <label>Client <span class="req">*</span></label>
+                  <div class="combo" id="client-combo">
+                    <div class="combo-input">
+                      <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+                      <input id="client-search" type="text" placeholder="Search clients…" autocomplete="off">
+                    </div>
+                    <div class="combo-menu" id="client-menu"></div>
+                  </div>
+                  <div id="client-selected"></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- 3 · Location -->
+            <section class="card">
+              <div class="card-head">
+                <div class="ttl">
+                  <span class="card-num">3</span>
+                  <h2>Project location</h2>
+                </div>
+                <p>Select the location of the project. Coordinates and coordinate system are determined automatically.</p>
+              </div>
+              <div class="card-body">
+                <div class="field" id="f-loc">
+                  <label>Address <span class="req">*</span></label>
+                  <div class="combo" id="loc-combo">
+                    <div class="combo-input">
+                      <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>
+                      <input id="loc-search" type="text" placeholder="Search address, postal code or city…" autocomplete="off">
+                    </div>
+                    <div class="combo-menu" id="loc-menu"></div>
+                  </div>
+                  <div id="loc-selected"></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- 4 · Preset -->
+            <section class="card">
+              <div class="card-head">
+                <div class="ttl">
+                  <span class="card-num">4</span>
+                  <h2>Project preset</h2>
+                </div>
+                <p>Choose the preset that will be used to generate the project workspace.</p>
+              </div>
+              <div class="card-body">
+                <div class="preset-group" id="preset-group"></div>
+              </div>
+            </section>
+
+          </div>
+
+          <!-- ============ SUMMARY COLUMN ============ -->
+          <aside class="summary-col" style="height: 940px">
+
+            <section class="summary" aria-label="Project summary">
+              <div class="summary-head">
+                <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+                <span class="overline">Project summary</span>
+                <span class="ready" id="ready-pill"><span class="dot"></span><span class="rtxt">Incomplete</span></span>
+              </div>
+              <div class="summary-body">
+                <div class="sgroup">
+                  <div class="sg-label">Project</div>
+                  <div class="srow" data-check="name"><span class="srow-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="k">Name</span><span class="v empty" data-sum="name">Not set</span></div>
+                  <div class="srow" data-check="code"><span class="srow-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="k">Code</span><span class="v mono empty" data-sum="code">Not set</span></div>
+                  <div class="srow" data-check="type"><span class="srow-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="k">Type</span><span class="v empty" data-sum="type">Not set</span></div>
+                </div>
+                <div class="sgroup">
+                  <div class="sg-label">Client</div>
+                  <div class="srow" data-check="client"><span class="srow-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="k">Selected</span><span class="v empty" data-sum="client">None selected</span></div>
+                </div>
+                <div class="sgroup">
+                  <div class="sg-label">Location</div>
+                  <div class="srow" data-check="location"><span class="srow-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="k">Address</span><span class="v empty lines" data-sum="location">None selected</span></div>
+                </div>
+                <div class="sgroup">
+                  <div class="sg-label">Preset</div>
+                  <div class="srow" data-check="preset"><span class="srow-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="k">Selected</span><span class="v empty" data-sum="preset">None selected</span></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- summary actions -->
+            <div class="sum-actions">
+              <div class="status" id="status-text" style="justify-content: flex-start">
+                <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+                <span id="status-label">Complete required information to create project.</span>
+              </div>
+              <div class="sum-btns">
+                <button class="btn-ghost" id="btn-import">
+                  <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/></svg></span>
+                  Import
+                </button>
+                <button class="btn-ghost" id="btn-cancel">Cancel</button>
+              </div>
+              <button class="btn-primary sum-create" id="btn-create" disabled>
+                Create project
+                <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+              </button>
+            </div>
+          </aside>
+
+        </div>
+      </div>
+
+
+
+      <!-- ============ IMPORT DETAILS MODAL ============ -->
+      <div class="scrim" id="import-scrim">
+        <div class="dialog import" role="dialog" aria-modal="true" aria-labelledby="im-title">
+          <div class="dlg-head">
+            <span class="dh-ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/></svg></span>
+            <div>
+              <h3 id="im-title">Import project information</h3>
+              <p>Start from an existing project or template. You can adjust everything after.</p>
+            </div>
+            <button class="dh-x" id="im-close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+          </div>
+          <div class="dlg-body im-body">
+            <div class="combo-input im-search">
+              <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+              <input id="im-search" type="text" placeholder="Search projects and templates…" autocomplete="off">
+            </div>
+            <div class="im-list" id="im-list"></div>
+          </div>
+          <div class="dlg-foot">
+            <button class="btn-ghost" id="im-cancel">Cancel</button>
+            <button class="btn-primary" id="im-apply" disabled>Import details</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ CREATE CLIENT MODAL ============ -->
+      <div class="scrim" id="client-scrim">
+        <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="cc-title">
+          <div class="dlg-head">
+            <span class="dh-ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg></span>
+            <div>
+              <h3 id="cc-title">Create client</h3>
+              <p>Add a new client. It will be selected automatically.</p>
+            </div>
+            <button class="dh-x" id="cc-close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+          </div>
+          <div class="dlg-body">
+            <div class="field">
+              <label for="cc-company">Company name <span class="req">*</span></label>
+              <input class="input" id="cc-company" type="text" placeholder="Enter company name" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="cc-contact">Contact name <span class="req">*</span></label>
+              <input class="input" id="cc-contact" type="text" placeholder="Enter contact name" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="cc-email">Email address <span class="req">*</span></label>
+              <input class="input" id="cc-email" type="email" placeholder="name@company.com" autocomplete="off">
+            </div>
+          </div>
+          <div class="dlg-foot">
+            <button class="btn-ghost" id="cc-cancel">Cancel</button>
+            <button class="btn-primary" id="cc-save" disabled>Create client</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ CREATING / LOADING MODAL ============ -->
+      <div class="scrim" id="creating-scrim">
+        <div class="dialog creating" role="dialog" aria-modal="true" aria-labelledby="cr-title">
+          <div class="dlg-body">
+            <div class="cring-wrap" id="cring-wrap">
+              <div class="cring-spin"></div>
+              <svg class="cring" id="cring" viewBox="0 0 150 150">
+                <circle class="cring-track" cx="75" cy="75" r="64"></circle>
+                <circle class="cring-fill" id="cring-fill" cx="75" cy="75" r="64"></circle>
+              </svg>
+              <div class="cring-center">
+                <span class="cring-pct" id="cring-pct">0%</span>
+                <span class="cring-ic"><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+              </div>
+            </div>
+            <h3 id="cr-title">Creating project</h3>
+            <p class="cr-step" id="cr-step">Generating your workspace…</p>
+          </div>
+          <div class="dlg-foot">
+            <button class="btn-ghost" id="cr-cancel">Cancel</button>
+          </div>
+          <div class="sr-only" id="cr-live" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <!-- ============ SUCCESS MODAL ============ -->
+      <div class="scrim" id="success-scrim">
+        <div class="dialog success" role="dialog" aria-modal="true" aria-labelledby="su-title">
+          <div class="dlg-body">
+            <span class="s-ic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+            <h3 id="su-title">Project successfully created</h3>
+            <p>Your project workspace has been created and is ready for use.</p>
+            <div class="s-summary">
+              <div class="srow"><span class="k">Name</span><span class="v" data-su="name">—</span></div>
+              <div class="srow"><span class="k">Code</span><span class="v mono" data-su="code">—</span></div>
+              <div class="srow"><span class="k">Preset</span><span class="v" data-su="preset">—</span></div>
+            </div>
+          </div>
+          <div class="dlg-foot">
+            <div class="row-btns">
+              <button class="btn-ghost" id="su-back">Back to projects</button>
+              <button class="btn-primary" id="su-open">Open project<span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span></button>
+            </div>
+            <button class="btn-tertiary" id="su-another">Create another project</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+</div>
+
+<script src="components/create-project.js"></script>
+<script>
+  /* ---------- scale-to-fit ---------- */
+  (function () {
+    var stage = document.getElementById('stage');
+    function fit() {
+      var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      stage.style.transform = 'scale(' + s + ')';
+    }
+    window.addEventListener('resize', fit);
+    if (window.ResizeObserver) { new ResizeObserver(fit).observe(document.documentElement); }
+    window.addEventListener('load', fit);
+    setTimeout(fit, 250);
+    fit();
+  })();
+
+  /* ---------- pin summary column to the visible scroll area ---------- */
+  (function () {
+    var scroll = document.querySelector('.scroll');
+    var col = document.querySelector('.summary-col');
+    if (!scroll || !col) return;
+    function size() {
+      var cs = getComputedStyle(scroll);
+      var h = scroll.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      col.style.setProperty('--summary-h', h + 'px');
+    }
+    window.addEventListener('resize', size);
+    size();
+    // re-measure after layout/fonts settle
+    setTimeout(size, 50);
+  })();
+</script>
+</body>
+</html>
