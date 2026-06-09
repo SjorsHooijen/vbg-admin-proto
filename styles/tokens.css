@@ -171,3 +171,57 @@ code, .vbg-code {
   padding: 1px 5px;
   color: var(--fg1);
 }
+
+/* ============================================================
+   Cross-page UI conventions (project-wide)
+   Applied to every admin page that links this stylesheet.
+   Property sets here are intentionally non-overlapping with the
+   per-page inline rules, so they layer cleanly without overrides.
+   ============================================================ */
+
+/* --- Page header: keep the subheader to a single line so the
+   greeting block stays as compact as the action row beside it --- */
+/* --- Hide per-table record-count labels (rcount) --- */
+.rcount { display: none; }
+
+.main-header { gap: 24px; }
+.main-header .greeting { min-width: 0; }
+.main-header .greeting p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.main-header .actions { flex: 0 0 auto; }
+
+/* --- Table pagination control (shared) --- */
+.tfoot .pager { display: flex; align-items: center; gap: 4px; }
+.tfoot .pager button {
+  min-width: 30px; height: 30px; padding: 0 8px; border-radius: var(--r-sm);
+  border: 1px solid var(--border-subtle); background: var(--bg-surface);
+  color: var(--fg2); font: var(--text-label); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.tfoot .pager button:hover:not(:disabled) { background: var(--bg-hover); }
+.tfoot .pager button.on { background: var(--bg-selected); border-color: var(--vbg-amber-300); color: var(--fg-accent); }
+.tfoot .pager button:disabled { opacity: .45; cursor: default; }
+.tfoot .pager .ell { padding: 0 3px; color: var(--fg4); align-self: center; font: var(--text-label); }
+
+/* --- Scrollbars: reveal only on hover / focus-within --- */
+/* Firefox */
+* { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+*:hover, *:focus-within { scrollbar-color: var(--slate-300) transparent; }
+/* WebKit / Blink */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: var(--r-full);
+  background-clip: padding-box;
+  transition: background var(--dur-base) var(--ease-out);
+}
+:hover::-webkit-scrollbar-thumb,
+:focus-within::-webkit-scrollbar-thumb { background: var(--slate-300); background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--slate-400); background-clip: padding-box; }
+::-webkit-scrollbar-corner { background: transparent; }

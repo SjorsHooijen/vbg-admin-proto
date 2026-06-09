@@ -6,6 +6,7 @@
 <title>VBG — Projects</title>
 <link rel="stylesheet" href="styles/tokens.css">
 <script src="components/sidebar.js" defer></script>
+<script src="components/pagination.js" defer></script>
 <script src="components/projects-table.js" defer></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; }
@@ -204,6 +205,11 @@
     setTimeout(fit, 250);
     fit();
   })();
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    VBGPager({ table: 'vbg-projects-table', pageSize: 9, noun: 'projects' });
+  });
 </script>
 </body>
 </html>

@@ -6,6 +6,7 @@
 <title>VBG — Documents</title>
 <link rel="stylesheet" href="styles/tokens.css">
 <script src="components/sidebar.js" defer></script>
+<script src="components/pagination.js" defer></script>
 <script src="components/doc-viewer.js" defer></script>
 <script src="components/documents-table.js" defer></script>
 <style>
@@ -197,6 +198,11 @@
     setTimeout(fit, 250);
     fit();
   })();
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    VBGPager({ table: 'vbg-documents-table', pageSize: 9, noun: 'documents' });
+  });
 </script>
 </body>
 </html>

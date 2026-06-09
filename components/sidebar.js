@@ -39,22 +39,22 @@
     // ── Group 4: Operations ──
     [
       {
-        key: 'integrations', label: 'Integrations', href: '#',
+        key: 'integrations', label: 'Integrations', href: 'Integrations.html',
         icon: '<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/><path d="M12 17a9 9 0 0 0 9-3.6"/><path d="M12 17a9 9 0 0 1-9-3.6"/>'
       },
       {
-        key: 'billing', label: 'Billing & Licensing', href: '#',
+        key: 'billing', label: 'Billing & Licensing', href: 'Billing.html',
         icon: '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>'
       },
       {
-        key: 'audit', label: 'Audit & Compliance', href: '#',
+        key: 'audit', label: 'Audit & Compliance', href: 'Audit.html',
         icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/>'
       }
     ],
     // ── Group 5: System ──
     [
       {
-        key: 'system', label: 'System', href: '#',
+        key: 'system', label: 'System', href: 'System.html',
         icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'
       },
     ]
@@ -112,6 +112,10 @@
       transition: background var(--dur-fast) var(--ease-out);
     }
     vbg-sidebar .sb-profile:hover { background: var(--bg-hover); }
+    vbg-sidebar .sb-profile.active { background: var(--bg-selected); }
+    vbg-sidebar .sb-profile.active .avatar { box-shadow: 0 0 0 2px var(--vbg-amber), 0 1px 2px rgba(184,111,0,.30); }
+    vbg-sidebar .sb-profile.active .name { color: var(--fg-accent); }
+    vbg-sidebar .sb-profile.active .role { color: var(--vbg-amber-600); }
     vbg-sidebar .avatar {
       width: 40px; height: 40px; flex: 0 0 40px; border-radius: var(--r-full);
       background: var(--vbg-amber); color: var(--fg-inverse);
@@ -166,7 +170,7 @@
         + '<nav class="sb-nav">'
         +   navHtml(active)
         + '</nav>'
-        + '<a class="sb-profile" href="User Profile.html" style="text-decoration:none;">'
+        + '<a class="sb-profile' + (active === 'profile' ? ' active' : '') + '" href="User Profile.html" style="text-decoration:none;">'
         +   '<div class="avatar">SK</div>'
         +   '<div class="meta">'
         +     '<div class="name">Sanne Koenders</div>'
